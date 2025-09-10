@@ -323,7 +323,7 @@ This resume was generated from a LinkedIn profile.
                     </div>
                      <Button variant="secondary" onClick={handleLinkedInImport}>
                         <Linkedin className="mr-2 h-4 w-4" />
-                        Import from LinkedIn
+                        Analyze LinkedIn Profile
                     </Button>
                 </div>
               </CardHeader>
@@ -505,5 +505,3 @@ This resume was generated from a LinkedIn profile.
     </div>
   );
 }
-
-    
