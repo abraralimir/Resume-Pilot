@@ -11,10 +11,11 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const EnhanceResumeInputSchema = z.object({
-  resume: z.union([
-    z.string().describe('The text content of the resume.'),
-    z.string().describe("A data URI of the user's resume file (PDF or DOCX). Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
-  ]),
+  resume: z
+    .string()
+    .describe(
+      "The user's resume, which can be either plain text or a data URI (e.g., 'data:application/pdf;base64,...')."
+    ),
   jobDescription: z
     .string()
     .optional()
@@ -23,11 +24,17 @@ const EnhanceResumeInputSchema = z.object({
 export type EnhanceResumeInput = z.infer<typeof EnhanceResumeInputSchema>;
 
 const EnhanceResumeOutputSchema = z.object({
-  enhancedResume: z.string().describe('The enhanced resume text, formatted in Markdown for a professional appearance with clear headings, lists, and spacing.'),
+  enhancedResume: z
+    .string()
+    .describe(
+      'The enhanced resume text, formatted in Markdown for a professional appearance with clear headings, lists, and spacing.'
+    ),
 });
 export type EnhanceResumeOutput = z.infer<typeof EnhanceResumeOutputSchema>;
 
-export async function enhanceResume(input: EnhanceResumeInput): Promise<EnhanceResumeOutput> {
+export async function enhanceResume(
+  input: EnhanceResumeInput
+): Promise<EnhanceResumeOutput> {
   return enhanceResumeFlow(input);
 }
 
@@ -53,10 +60,10 @@ const enhanceResumePrompt = ai.definePrompt({
   Job Description: {{{jobDescription}}}
 
   Resume:
-  {{#if (isString resume)}}
-  {{{resume}}}
+  {{#if resume.startsWith("data:")}}
+    {{media url=resume}}
   {{else}}
-  {{media url=resume}}
+    {{{resume}}}
   {{/if}}
 
   Enhanced Resume (in Markdown):`,

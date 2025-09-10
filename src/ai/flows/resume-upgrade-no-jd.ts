@@ -11,22 +11,37 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const UpgradeResumeWithoutJDSchema = z.object({
-  resume: z.union([
-    z.string().describe('The text content of the resume.'),
-    z.string().describe("A data URI of the user's resume file (PDF or DOCX). Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
-  ]),
-  jobType: z.string().describe('The type of job the user is seeking (e.g., Software Engineer, Project Manager).'),
+  resume: z
+    .string()
+    .describe(
+      "The user's resume, which can be either plain text or a data URI (e.g., 'data:application/pdf;base64,...')."
+    ),
+  jobType: z
+    .string()
+    .describe(
+      'The type of job the user is seeking (e.g., Software Engineer, Project Manager).'
+    ),
 });
 
-export type UpgradeResumeWithoutJDInput = z.infer<typeof UpgradeResumeWithoutJDSchema>;
+export type UpgradeResumeWithoutJDInput = z.infer<
+  typeof UpgradeResumeWithoutJDSchema
+>;
 
 const UpgradeResumeWithoutJDOutputSchema = z.object({
-  enhancedResume: z.string().describe('The upgraded resume text, formatted in Markdown and optimized for the specified job type.'),
+  enhancedResume: z
+    .string()
+    .describe(
+      'The upgraded resume text, formatted in Markdown and optimized for the specified job type.'
+    ),
 });
 
-export type UpgradeResumeWithoutJDOutput = z.infer<typeof UpgradeResumeWithoutJDOutputSchema>;
+export type UpgradeResumeWithoutJDOutput = z.infer<
+  typeof UpgradeResumeWithoutJDOutputSchema
+>;
 
-export async function upgradeResumeWithoutJD(input: UpgradeResumeWithoutJDInput): Promise<UpgradeResumeWithoutJDOutput> {
+export async function upgradeResumeWithoutJD(
+  input: UpgradeResumeWithoutJDInput
+): Promise<UpgradeResumeWithoutJDOutput> {
   return upgradeResumeWithoutJDFlow(input);
 }
 
@@ -45,10 +60,10 @@ const upgradeResumeWithoutJDPrompt = ai.definePrompt({
   5.  Formatting the final output in Markdown with professional headings (e.g., ## Experience), bullet points for lists, and appropriate line breaks for readability.
 
   Here's the resume:
-  {{#if (isString resume)}}
-  {{{resume}}}
+  {{#if resume.startsWith("data:")}}
+    {{media url=resume}}
   {{else}}
-  {{media url=resume}}
+    {{{resume}}}
   {{/if}}
 
   The user is seeking a job as a: {{{jobType}}}
