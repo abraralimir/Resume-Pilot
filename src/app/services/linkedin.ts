@@ -3,17 +3,15 @@
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
-// This redirect URI must exactly match the one in your LinkedIn app settings and the one used to initiate the login.
-const REDIRECT_URI = 'http://localhost:9002/api/auth/linkedin/callback';
 
-export async function getAccessToken(code: string): Promise<{ access_token: string }> {
+export async function getAccessToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
   const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
   const params = new URLSearchParams({
     grant_type: 'authorization_code',
     code: code,
     client_id: LINKEDIN_CLIENT_ID!,
     client_secret: LINKEDIN_CLIENT_SECRET!,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
   });
 
   const response = await fetch(tokenUrl, {
