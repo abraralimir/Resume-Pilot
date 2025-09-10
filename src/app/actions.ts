@@ -54,7 +54,8 @@ function markdownToHtml(markdown: string): string {
 export async function parseResumeFile(fileBuffer: ArrayBuffer, fileType: string): Promise<{ text: string }> {
     try {
         if (fileType === 'application/pdf') {
-            const data = await pdf(Buffer.from(fileBuffer));
+            // Pass null as the second argument to force parsing from buffer
+            const data = await pdf(Buffer.from(fileBuffer), {pagerender: null as any});
             return { text: data.text };
         } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const { value } = await mammoth.extractRawText({ buffer: Buffer.from(fileBuffer) });
