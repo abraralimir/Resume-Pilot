@@ -39,6 +39,10 @@ export default function LinkedInProfilePage() {
             const description = searchParams.get('error_description');
             setError(`Login Failed: ${decodeURIComponent(description || errorParam)}`);
             setIsLoading(false);
+            // This is a workaround to close the popup if it's still open
+            if (window.opener) {
+                window.close();
+            }
             return;
         }
 
@@ -64,7 +68,6 @@ export default function LinkedInProfilePage() {
         
         // This is a workaround to close the popup if it's still open
         if (window.opener) {
-            window.opener.location.reload(); // Reload the main page
             window.close();
         }
 
