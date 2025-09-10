@@ -14,14 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { LinkedInProfile } from '@/ai/flows/linkedin-profile-analyzer';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function getCookie(name: string): string | null {
-    if (typeof document === 'undefined') return null;
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-    return null;
-}
-
 export default function LinkedInProfilePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -35,53 +27,48 @@ export default function LinkedInProfilePage() {
 
     useEffect(() => {
         const errorParam = searchParams.get('error');
-        const description = searchParams.get('error_description');
+        const errorDesc = searchParams.get('error_description');
+        const name = searchParams.get('name');
+        const email = searchParams.get('email');
+        const picture = searchParams.get('picture');
 
-        // This page can be loaded in a popup or directly.
-        // If there's an error, we want to inform the user.
-        if (errorParam && window.opener) {
-            // If in a popup, redirect the opener to show the error.
-            const errorUrl = new URL(window.location.href);
-            errorUrl.pathname = '/linkedin/profile'; // Ensure path is correct
-            window.opener.location.href = errorUrl.toString();
-            window.close();
-            return;
-        } else if (errorParam) {
-            // If loaded directly with an error, just show it.
-            setError(`Login Failed: ${decodeURIComponent(description || errorParam)}`);
+        // This effect runs on the page after the server-side callback.
+        // It handles three scenarios: error, success in popup, success on main page.
+        if (errorParam) {
+            const decodedError = `Login Failed: ${decodeURIComponent(errorDesc || errorParam)}`;
+            setError(decodedError);
             setIsLoading(false);
+            // If we are in a popup, tell the main window about the error and close.
+            if (window.opener) {
+                const errorUrl = new URL(window.location.href);
+                errorUrl.searchParams.set('error', 'true');
+                errorUrl.searchParams.set('error_description', decodedError);
+                 window.opener.location.href = `/linkedin/profile?${errorUrl.searchParams.toString()}`;
+                window.close();
+            }
             return;
         }
 
-        // The auth flow stores profile data in a cookie. We need to read it.
-        try {
-            const profileCookie = getCookie('linkedin_profile');
-            if (profileCookie) {
-                const profileData = JSON.parse(decodeURIComponent(profileCookie));
-                const userProfile = {
-                  name: `${profileData.given_name} ${profileData.family_name}`,
-                  email: profileData.email,
-                  picture: profileData.picture,
-                };
-                setProfile(userProfile);
+        // If we have profile data, it means success.
+        if (name && email && picture) {
+            const userProfile = { name, email, picture };
+            setProfile(userProfile);
+            setIsLoading(false);
 
-                // If this page is in a popup, redirect the main window and close the popup.
-                if (window.opener) {
-                    window.opener.location.href = '/linkedin/profile';
-                    window.close();
-                }
-
-            } else if (!window.opener) { // Only show error if not in a popup context
-                 setError("Could not retrieve LinkedIn profile. Please try signing in again.");
+            // If this page is running in the popup, we must update the main window
+            // and close the popup.
+            if (window.opener) {
+                window.opener.location.href = window.location.href;
+                window.close();
             }
-        } catch (e) {
-            console.error("Failed to parse profile cookie", e);
-            setError("There was an issue processing your profile data. Please try again.");
-        } finally {
-             setIsLoading(false);
+        } else {
+            // If there's no error and no profile data, we might be on the initial load
+            // of the main window's /linkedin/profile page. We can just wait.
+            setIsLoading(false);
         }
 
     }, [searchParams, router]);
+
 
     const handleAnalyze = async () => {
         if (!profile) return;
@@ -99,21 +86,6 @@ export default function LinkedInProfilePage() {
             }
         });
     };
-
-    if (isLoading && !error) {
-        return (
-            <div className="flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1 flex items-center justify-center">
-                   <div className="flex flex-col items-center gap-4">
-                      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                      <p className="text-lg">Finalizing Authentication...</p>
-                    </div>
-                </main>
-                <Footer />
-            </div>
-        )
-    }
 
     if (error) {
         return (
@@ -134,13 +106,29 @@ export default function LinkedInProfilePage() {
             </div>
         )
     }
+    
+    if (!profile && !error) {
+        return (
+             <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 flex items-center justify-center">
+                   <div className="flex flex-col items-center gap-4 text-center">
+                      <h1 className="font-headline text-3xl font-bold">Profile Analysis</h1>
+                      <p className="text-muted-foreground max-w-md">Sign in with LinkedIn on the previous page to view your profile analysis.</p>
+                      <Button onClick={() => router.push('/linkedin')}>Go to Sign In</Button>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        )
+    }
 
-    return (
-        <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1 py-12 md:py-20">
-                <div className="container max-w-4xl mx-auto space-y-8">
-                    {profile ? (
+    if (profile) {
+        return (
+            <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 py-12 md:py-20">
+                    <div className="container max-w-4xl mx-auto space-y-8">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="font-headline text-3xl">Your LinkedIn Profile</CardTitle>
@@ -164,36 +152,44 @@ export default function LinkedInProfilePage() {
                                 </Button>
                             </CardContent>
                         </Card>
-                    ) : (
-                         <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                            <p className="text-lg">Loading Profile...</p>
-                         </div>
-                    )}
 
-                    {(isAnalyzing || analysis) && (
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="font-headline text-3xl">AI-Powered Analysis & Suggestions</CardTitle>
-                                <CardDescription>Expert recommendations to optimize your profile.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {isAnalyzing ? (
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-8 w-3/4"/>
-                                        <Skeleton className="h-24 w-full"/>
-                                        <Skeleton className="h-6 w-5/6"/>
-                                    </div>
-                                ) : (
-                                   analysis && (
-                                     <Alert className="bg-transparent text-base">
-                                        <div dangerouslySetInnerHTML={{ __html: analysis.replace(/\n/g, '<br />') }} />
-                                    </Alert>
-                                   )
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                        {(isAnalyzing || analysis) && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-3xl">AI-Powered Analysis & Suggestions</CardTitle>
+                                    <CardDescription>Expert recommendations to optimize your profile.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {isAnalyzing ? (
+                                        <div className="space-y-4">
+                                            <Skeleton className="h-8 w-3/4"/>
+                                            <Skeleton className="h-24 w-full"/>
+                                            <Skeleton className="h-6 w-5/6"/>
+                                        </div>
+                                    ) : (
+                                    analysis && (
+                                        <Alert className="bg-transparent text-base">
+                                            <div dangerouslySetInnerHTML={{ __html: analysis.replace(/\n/g, '<br />') }} />
+                                        </Alert>
+                                    )
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+    
+     return (
+        <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-lg">Loading Profile...</p>
                 </div>
             </main>
             <Footer />

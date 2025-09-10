@@ -62,36 +62,26 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     const error = searchParams.get('error');
     const state = searchParams.get('state');
 
-    // --- Step 2: Retrieve state and code verifier from cookies ---
     const storedState = req.cookies.get('linkedin_state')?.value;
     const storedCodeVerifier = req.cookies.get('linkedin_code_verifier')?.value;
-
+    
     const clientCallbackUrl = new URL(`${APP_URL}/linkedin/profile`);
 
-    // --- Step 3: Validate state ---
+    // --- Validate state ---
     if (error || !state || !storedState || state !== storedState) {
       const errorDescription = searchParams.get('error_description') || 'Invalid state or an error occurred.';
       clientCallbackUrl.searchParams.set('error', error || 'state_mismatch');
       clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorDescription));
       const response = NextResponse.redirect(clientCallbackUrl.toString());
-       // Clear cookies on error
       response.cookies.delete('linkedin_state');
       response.cookies.delete('linkedin_code_verifier');
       return response;
     }
 
-    if (!code) {
-        clientCallbackUrl.searchParams.set('error', 'no_code');
-        clientCallbackUrl.searchParams.set('error_description', 'Authorization code not found.');
-        const response = NextResponse.redirect(clientCallbackUrl.toString());
-        response.cookies.delete('linkedin_state');
-        response.cookies.delete('linkedin_code_verifier');
-        return response;
-    }
-
-    if (!storedCodeVerifier) {
-        clientCallbackUrl.searchParams.set('error', 'no_code_verifier');
-        clientCallbackUrl.searchParams.set('error_description', 'Code verifier not found. Your session may have expired.');
+    if (!code || !storedCodeVerifier) {
+        const errorDescription = !code ? 'Authorization code not found.' : 'Code verifier not found. Your session may have expired.';
+        clientCallbackUrl.searchParams.set('error', !code ? 'no_code' : 'no_code_verifier');
+        clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorDescription));
         const response = NextResponse.redirect(clientCallbackUrl.toString());
         response.cookies.delete('linkedin_state');
         response.cookies.delete('linkedin_code_verifier');
@@ -99,19 +89,16 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     }
 
     try {
-        // --- Step 4: Exchange code for access token ---
+        // Exchange code for access token
         const { access_token } = await getAccessToken(code, REDIRECT_URI, storedCodeVerifier);
         const profileData = await getProfileData(access_token);
+        
+        // Pass data to the client-side page via URL parameters
+        clientCallbackUrl.searchParams.set('name', `${profileData.given_name} ${profileData.family_name}`);
+        clientCallbackUrl.searchParams.set('email', profileData.email);
+        clientCallbackUrl.searchParams.set('picture', profileData.picture);
 
         const response = NextResponse.redirect(clientCallbackUrl.toString());
-        
-        // Store profile data in a secure, http-only cookie
-        response.cookies.set('linkedin_profile', JSON.stringify(profileData), {
-          httpOnly: true,
-          secure: process.env.NODE_ENV !== 'development',
-          maxAge: 60 * 60, // 1 hour
-          path: '/',
-        });
 
         // Clear state and verifier cookies as they are single-use
         response.cookies.delete('linkedin_state');
@@ -124,8 +111,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         const errorMessage = (err instanceof Error) ? err.message : 'Failed to fetch LinkedIn profile data.';
         clientCallbackUrl.searchParams.set('error', 'exchange_failed');
         clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorMessage));
-        const response = NextResponse.redirect(clientCallbackUrl.toString());
-        return response;
+        return NextResponse.redirect(clientCallbackUrl.toString());
     }
   }
 
