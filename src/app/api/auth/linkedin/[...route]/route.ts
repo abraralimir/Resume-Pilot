@@ -5,32 +5,25 @@ import {NextRequest, NextResponse} from 'next/server';
 import { getAccessToken, getProfileData } from '@/app/services/linkedin';
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+const REDIRECT_URI = `${APP_URL}/api/auth/linkedin/callback`;
 
-function getRedirectUri(req: NextRequest): string {
-    const host = req.headers.get('host') || 'localhost:9002';
-    const protocol = host.startsWith('localhost') ? 'http' : 'https';
-    return `${protocol}://${host}/api/auth/linkedin/callback`;
-}
 
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
   const route = params.route[0];
   
   if (route === 'signin') {
-    const REDIRECT_URI = getRedirectUri(req);
     const scope = 'openid profile email';
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
     return NextResponse.redirect(authUrl);
   }
 
   if (route === 'callback') {
-    const REDIRECT_URI = getRedirectUri(req);
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
-    const host = req.headers.get('host') || 'localhost:9002';
-    const protocol = host.startsWith('localhost') ? 'http' : 'https';
-    const clientCallbackUrl = new URL(`${protocol}://${host}/linkedin/callback`);
+    const clientCallbackUrl = new URL(`${APP_URL}/linkedin/callback`);
 
     if (error) {
       const errorDescription = searchParams.get('error_description') || 'An error occurred.';
