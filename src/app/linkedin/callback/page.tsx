@@ -11,38 +11,30 @@ export default function LinkedInCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const code = searchParams.get('code');
+    const profileParam = searchParams.get('profile');
     const errorParam = searchParams.get('error');
 
     if (errorParam) {
       setError(`Login failed: ${searchParams.get('error_description') || errorParam}`);
       return;
     }
-
-    if (code) {
-      // We can't use server actions here, so we create a temporary API route 
-      // to exchange the code for profile data.
-      fetch(`/api/auth/linkedin/exchange-code?code=${code}`)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error('Failed to exchange authorization code.');
-          }
-          return res.json();
-        })
-        .then(profileData => {
-          if (window.opener) {
-            // Send the profile data to the main window that opened this popup.
-            window.opener.postMessage({ type: 'linkedin-profile', data: profileData }, window.location.origin);
-            // Close the popup window.
-            window.close();
-          } else {
-             setError('Could not find the main window. Please close this tab and try again.');
-          }
-        })
-        .catch(err => {
-          setError(err.message || 'An unknown error occurred during authentication.');
-        });
+    
+    if (profileParam) {
+        try {
+            const profileData = JSON.parse(profileParam);
+             if (window.opener) {
+                // Send the profile data to the main window that opened this popup.
+                window.opener.postMessage({ type: 'linkedin-profile', data: profileData }, window.location.origin);
+                // Close the popup window.
+                window.close();
+            } else {
+                setError('Could not find the main window. Please close this tab and try again.');
+            }
+        } catch(e) {
+            setError('Failed to parse profile data.');
+        }
     }
+
   }, [searchParams]);
 
   return (
@@ -61,12 +53,10 @@ export default function LinkedInCallbackPage() {
       ) : (
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-lg">Authenticating with LinkedIn...</p>
+          <p className="text-lg">Finalizing Authentication...</p>
           <p className="text-sm text-muted-foreground">Please wait, this window will close automatically.</p>
         </div>
       )}
     </div>
   );
 }
-
-    
