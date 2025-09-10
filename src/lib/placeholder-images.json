@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "Abstract background for hero section",
+      "imageUrl": "https://picsum.photos/seed/rp-hero/1920/1080",
+      "imageHint": "abstract tech"
+    }
+  ]
 }
