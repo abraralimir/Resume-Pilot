@@ -27,7 +27,7 @@ function markdownToHtml(markdown: string): string {
         .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
         .replace(/<\/ul>\n<ul>/g, '')
         // Paragraphs
-        .replace(/\n\n/g, '<p>')
+        .replace(/\n\n/g, '</p><p>')
         .replace(/<p>$/g, '')
          // Line breaks
         .replace(/\n/g, '<br>');
@@ -36,26 +36,35 @@ function markdownToHtml(markdown: string): string {
     <html>
       <head>
         <style>
-          body { font-family: sans-serif; line-height: 1.5; }
-          h1, h2, h3 { color: #333; }
-          ul { padding-left: 20px; }
+          body { font-family: sans-serif; line-height: 1.5; font-size: 11pt; }
+          h1, h2, h3 { color: #2F2F2F; }
+          h1 { font-size: 20pt; }
+          h2 { font-size: 16pt; }
+          h3 { font-size: 14pt; }
+          ul { padding-left: 20px; margin: 0; }
           li { margin-bottom: 5px; }
+          p { margin: 0 0 10px 0; }
         </style>
       </head>
-      <body>${html}</body>
+      <body><p>${html}</p></body>
     </html>
   `;
 }
 
 export async function parseResumeFile(fileBuffer: ArrayBuffer, fileType: string): Promise<{ text: string }> {
-    if (fileType === 'application/pdf') {
-        const data = await pdf(Buffer.from(fileBuffer));
-        return { text: data.text };
-    } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const { value } = await mammoth.extractRawText({ buffer: Buffer.from(fileBuffer) });
-        return { text: value };
-    } else {
-        throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+    try {
+        if (fileType === 'application/pdf') {
+            const data = await pdf(Buffer.from(fileBuffer));
+            return { text: data.text };
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const { value } = await mammoth.extractRawText({ buffer: Buffer.from(fileBuffer) });
+            return { text: value };
+        } else {
+            throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+        }
+    } catch (error) {
+        console.error("Error parsing file:", error);
+        throw new Error("Failed to read the contents of the file. It might be corrupted or in an unsupported format.");
     }
 }
 
@@ -109,17 +118,25 @@ export async function getEnhancedResume(
 export async function downloadEnhancedResume(resumeMarkdown: string, format: 'pdf' | 'docx'): Promise<string> {
     const resumeHtml = markdownToHtml(resumeMarkdown);
 
-    if (format === 'pdf') {
-        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox']});
-        const page = await browser.newPage();
-        await page.setContent(resumeHtml, { waitUntil: 'networkidle0' });
-        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-        await browser.close();
-        return pdfBuffer.toString('base64');
-    } else if (format === 'docx') {
-        const docxBuffer = await htmlToDocx(resumeHtml);
-        return (docxBuffer as Buffer).toString('base64');
-    } else {
-        throw new Error('Unsupported download format.');
+    try {
+        if (format === 'pdf') {
+            const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox']});
+            const page = await browser.newPage();
+            await page.setContent(resumeHtml, { waitUntil: 'networkidle0' });
+            const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '1in', right: '1in', bottom: '1in', left: '1in' } });
+            await browser.close();
+            return pdfBuffer.toString('base64');
+        } else if (format === 'docx') {
+            const docxBuffer = await htmlToDocx(resumeHtml, undefined, {
+                font: 'Calibri',
+                fontSize: 12,
+            });
+            return (docxBuffer as Buffer).toString('base64');
+        } else {
+            throw new Error('Unsupported download format.');
+        }
+    } catch (error) {
+        console.error(`Error generating ${format}:`, error);
+        throw new Error(`Failed to generate ${format.toUpperCase()} file. Please try again.`);
     }
 }
