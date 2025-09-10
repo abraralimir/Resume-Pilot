@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useTransition } from "react";
@@ -22,13 +23,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
 import { Skeleton } from "./ui/skeleton";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type AtsResult = { atsScore: number; areasForImprovement: string };
 type EnhancedResult = { enhancedResume: string };
@@ -110,7 +111,7 @@ export function ResumePilotClient() {
        toast({
         variant: "destructive",
         title: "Invalid Action",
-        description: "ATS Scan requires a job description. Please switch tabs.",
+        description: "ATS Scan requires a job description. Please use the 'Job Description' option.",
       });
       return;
     }
@@ -232,7 +233,7 @@ export function ResumePilotClient() {
                 <Textarea
                   id="resume-input"
                   placeholder="Paste your resume here..."
-                  className="min-h-96 resize-y"
+                  className="min-h-[400px] resize-y"
                   value={resume}
                   onChange={(e) => setResume(e.target.value)}
                 />
@@ -245,49 +246,54 @@ export function ResumePilotClient() {
             </div>
 
             {/* Job Description/Role Input */}
-            <div className="space-y-2">
-              <Tabs
-                value={jobInputMode}
-                onValueChange={(v) =>
-                  setJobInputMode(v as "description" | "role")
-                }
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="description">Job Description</TabsTrigger>
-                  <TabsTrigger value="role">Desired Role</TabsTrigger>
-                </TabsList>
-                <TabsContent value="description" className="mt-4">
-                  <Label htmlFor="jd-input" className="text-lg">Job Description</Label>
-                   <div className="group relative mt-2">
-                    <Textarea
-                      id="jd-input"
-                      placeholder="Paste the job description here..."
-                      className="min-h-96 resize-y"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                    />
-                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-transparent bg-background/80 opacity-0 transition-opacity group-focus-within:opacity-0 group-hover:opacity-100">
-                        <FileText className="mb-2 h-10 w-10 text-muted-foreground" />
-                        <p className="font-semibold text-muted-foreground">Paste from any source</p>
-                        <p className="text-sm text-muted-foreground/80">LinkedIn, Google Docs, etc.</p>
+            <div className="space-y-4">
+              <Label className="text-lg">Job Target</Label>
+               <RadioGroup
+                  value={jobInputMode}
+                  onValueChange={(v) =>
+                    setJobInputMode(v as "description" | "role")
+                  }
+                  className="space-y-4"
+                >
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="description" id="r-desc" />
+                      <Label htmlFor="r-desc">Job Description</Label>
+                    </div>
+                     <div className="group relative mt-2">
+                      <Textarea
+                        id="jd-input"
+                        placeholder="Paste the job description here..."
+                        className="min-h-[260px] resize-y"
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        disabled={jobInputMode !== 'description'}
+                      />
+                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-transparent bg-background/80 opacity-0 transition-opacity group-focus-within:opacity-0 group-hover:opacity-100">
+                          <FileText className="mb-2 h-10 w-10 text-muted-foreground" />
+                          <p className="font-semibold text-muted-foreground">Paste from any source</p>
+                          <p className="text-sm text-muted-foreground/80">LinkedIn, Google Docs, etc.</p>
+                      </div>
                     </div>
                   </div>
-                </TabsContent>
-                <TabsContent value="role" className="mt-4">
-                  <Label htmlFor="role-input" className="text-lg">Desired Job Role</Label>
-                  <Input
-                    id="role-input"
-                    placeholder="e.g., Senior Software Engineer"
-                    className="mt-2 text-base"
-                    value={jobRole}
-                    onChange={(e) => setJobRole(e.target.value)}
-                  />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    No job description? No problem. Tell us what you're looking for.
-                  </p>
-                </TabsContent>
-              </Tabs>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="role" id="r-role" />
+                      <Label htmlFor="r-role">Desired Job Role</Label>
+                    </div>
+                    <Input
+                      id="role-input"
+                      placeholder="e.g., Senior Software Engineer"
+                      className="mt-2 text-base"
+                      value={jobRole}
+                      onChange={(e) => setJobRole(e.target.value)}
+                      disabled={jobInputMode !== 'role'}
+                    />
+                     <p className="mt-2 text-sm text-muted-foreground">
+                      No job description? No problem.
+                    </p>
+                  </div>
+                </RadioGroup>
             </div>
           </CardContent>
         </Card>
