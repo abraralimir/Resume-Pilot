@@ -4,7 +4,7 @@
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
 
-export async function getAccessToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
+export async function getAccessToken(code: string, redirectUri: string, codeVerifier: string): Promise<{ access_token: string }> {
   const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
   
   if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
@@ -17,6 +17,7 @@ export async function getAccessToken(code: string, redirectUri: string): Promise
     client_id: LINKEDIN_CLIENT_ID,
     client_secret: LINKEDIN_CLIENT_SECRET,
     redirect_uri: redirectUri,
+    code_verifier: codeVerifier, // PKCE parameter
   });
 
   const response = await fetch(tokenUrl, {
