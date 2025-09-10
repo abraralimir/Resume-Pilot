@@ -6,7 +6,7 @@ import { getAccessToken, getProfileData } from '@/app/services/linkedin';
 import crypto from 'crypto';
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 const REDIRECT_URI = `${APP_URL}/api/auth/linkedin/callback`;
 const SCOPE = 'openid profile email';
 
@@ -37,8 +37,8 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     
     // Store state and code verifier in cookies
     const cookies = new NextResponse().cookies;
-    cookies.set('linkedin_state', state, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10 }); // 10 minutes
-    cookies.set('linkedin_code_verifier', codeVerifier, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10 });
+    cookies.set('linkedin_state', state, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' }); // 10 minutes
+    cookies.set('linkedin_code_verifier', codeVerifier, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' });
 
     const authUrlParams = new URLSearchParams({
         response_type: 'code',
@@ -71,30 +71,42 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     
     const clientCallbackUrl = new URL(`${APP_URL}/linkedin/callback`);
     
-    // Clear cookies after retrieving them, regardless of outcome
+    // Create a response object that we can modify and return
     const response = NextResponse.redirect(clientCallbackUrl.toString());
-    response.cookies.delete('linkedin_state');
-    response.cookies.delete('linkedin_code_verifier');
 
     // --- Step 3: Validate state ---
     if (error || !state || !storedState || state !== storedState) {
       const errorDescription = searchParams.get('error_description') || 'Invalid state or an error occurred.';
       clientCallbackUrl.searchParams.set('error', error || 'state_mismatch');
-      clientCallbackUrl.search-params.set('error_description', encodeURIComponent(errorDescription));
+      clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorDescription));
+       // Clear cookies on error
+      response.cookies.delete('linkedin_state');
+      response.cookies.delete('linkedin_code_verifier');
+      response.headers.set('Location', clientCallbackUrl.toString());
       return response;
     }
 
     if (!code) {
         clientCallbackUrl.searchParams.set('error', 'no_code');
         clientCallbackUrl.searchParams.set('error_description', 'Authorization code not found.');
+        response.cookies.delete('linkedin_state');
+        response.cookies.delete('linkedin_code_verifier');
+        response.headers.set('Location', clientCallbackUrl.toString());
         return response;
     }
 
     if (!storedCodeVerifier) {
         clientCallbackUrl.searchParams.set('error', 'no_code_verifier');
         clientCallbackUrl.searchParams.set('error_description', 'Code verifier not found. Your session may have expired.');
+        response.cookies.delete('linkedin_state');
+        response.cookies.delete('linkedin_code_verifier');
+        response.headers.set('Location', clientCallbackUrl.toString());
         return response;
     }
+    
+    // Clear cookies after retrieving them, as they are single-use
+    response.cookies.delete('linkedin_state');
+    response.cookies.delete('linkedin_code_verifier');
 
     try {
         // --- Step 4: Exchange code for access token ---
