@@ -12,7 +12,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { getAtsScore, getEnhancedResume, downloadEnhancedResume } from "@/app/actions";
+import { getAtsScore, getEnhancedResume, downloadEnhancedResumeAsPdf } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,21 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 type AtsResult = { atsScore: number; areasForImprovement: string };
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-background");
+
+// Helper function to convert Markdown to plain text
+function markdownToText(markdown: string): string {
+  return markdown
+    .replace(/^## (.*$)/gim, '$1')
+    .replace(/^# (.*$)/gim, '$1')
+    .replace(/\*\*(.*)\*\*/gim, '$1')
+    .replace(/__(.*)__/gim, '$1')
+    .replace(/\*(.*)\*/gim, '$1')
+    .replace(/_(.*)_/gim, '$1')
+    .replace(/^\s*[-*+] (.*)/gim, '- $1')
+    .replace(/\n{2,}/g, '\n\n')
+    .trim();
+}
+
 
 const CircleProgress = ({ score, text }: { score: number; text: string }) => {
     const [progress, setProgress] = useState(0);
@@ -182,19 +197,20 @@ export function ResumePilotClient() {
   const handleDownload = (content: string, format: "txt" | "pdf" | "docx", baseName: string) => {
     if (!content) return;
 
-    if (format === "txt") {
-      const blob = new Blob([content], { type: "text/plain" });
+    if (format === "txt" || format === "docx") {
+      const plainText = markdownToText(content);
+      const blob = new Blob([plainText], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${baseName}.txt`;
+      a.download = `${baseName}.${format === 'docx' ? 'docx' : 'txt'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({
         title: "Download Started",
-        description: `Your ${baseName}.txt is downloading.`
+        description: `Your ${baseName}.${format} is downloading.`
       });
       return;
     }
@@ -202,8 +218,8 @@ export function ResumePilotClient() {
     startDownloading(async () => {
       try {
         toast({ title: "Generating Download", description: `Your ${format.toUpperCase()} file is being prepared...` });
-        const base64 = await downloadEnhancedResume(content, format);
-        const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const base64 = await downloadEnhancedResumeAsPdf(content);
+        const mimeType = 'application/pdf';
         const byteCharacters = atob(base64);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {

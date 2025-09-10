@@ -99,29 +99,19 @@ export async function getEnhancedResume(
     }
 }
 
-export async function downloadEnhancedResume(resumeMarkdown: string, format: 'pdf' | 'docx'): Promise<string> {
+export async function downloadEnhancedResumeAsPdf(resumeMarkdown: string): Promise<string> {
     const resumeHtml = markdownToHtml(resumeMarkdown);
 
     try {
-        if (format === 'pdf') {
-            const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox']});
-            const page = await browser.newPage();
-            await page.setContent(resumeHtml, { waitUntil: 'networkidle0' });
-            const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '1in', right: '1in', bottom: '1in', left: '1in' } });
-            await browser.close();
-            return pdfBuffer.toString('base64');
-        } else if (format === 'docx') {
-            const docxBuffer = await htmlToDocx(resumeHtml, undefined, {
-                font: 'Calibri',
-                fontSize: 12,
-            });
-            return (docxBuffer as Buffer).toString('base64');
-        } else {
-            throw new Error('Unsupported download format.');
-        }
+        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox']});
+        const page = await browser.newPage();
+        await page.setContent(resumeHtml, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '1in', right: '1in', bottom: '1in', left: '1in' } });
+        await browser.close();
+        return pdfBuffer.toString('base64');
     } catch (error) {
-        console.error(`Error generating ${format}:`, error);
-        throw new Error(`Failed to generate ${format.toUpperCase()} file. Please try again.`);
+        console.error(`Error generating PDF:`, error);
+        throw new Error(`Failed to generate PDF file. Please try again.`);
     }
 }
 
