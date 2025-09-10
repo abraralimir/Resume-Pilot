@@ -3,7 +3,7 @@ import {NextRequest, NextResponse} from 'next/server';
 import { getAccessToken, getProfileData } from '@/app/services/linkedin';
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
-// This redirect URI must exactly match the one in your LinkedIn app settings and the one used to get the access token.
+// This redirect URI must exactly match the one in your LinkedIn app settings.
 const REDIRECT_URI = 'http://localhost:9002/api/auth/linkedin/callback';
 
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
