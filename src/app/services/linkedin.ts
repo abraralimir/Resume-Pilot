@@ -3,7 +3,7 @@
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
-// Ensure this redirect URI matches the one in your LinkedIn Developer App settings AND the one used to initiate the login.
+// This redirect URI must exactly match the one in your LinkedIn app settings and the one used to initiate the login.
 const REDIRECT_URI = 'http://localhost:9002/api/auth/linkedin/callback';
 
 export async function getAccessToken(code: string): Promise<{ access_token: string }> {
@@ -51,5 +51,3 @@ export async function getProfileData(accessToken: string): Promise<any> {
 
     return response.json();
 }
-
-    
