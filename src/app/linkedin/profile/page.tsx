@@ -35,28 +35,43 @@ export default function LinkedInProfilePage() {
 
     useEffect(() => {
         const errorParam = searchParams.get('error');
-        if (errorParam) {
-            const description = searchParams.get('error_description');
+        const description = searchParams.get('error_description');
+
+        // This page can be loaded in a popup or directly.
+        // If there's an error, we want to inform the user.
+        if (errorParam && window.opener) {
+            // If in a popup, redirect the opener to show the error.
+            const errorUrl = new URL(window.location.href);
+            errorUrl.pathname = '/linkedin/profile'; // Ensure path is correct
+            window.opener.location.href = errorUrl.toString();
+            window.close();
+            return;
+        } else if (errorParam) {
+            // If loaded directly with an error, just show it.
             setError(`Login Failed: ${decodeURIComponent(description || errorParam)}`);
             setIsLoading(false);
-            // This is a workaround to close the popup if it's still open
-            if (window.opener) {
-                window.close();
-            }
             return;
         }
 
-        // The auth flow now stores profile data in a cookie. We need to read it.
+        // The auth flow stores profile data in a cookie. We need to read it.
         try {
             const profileCookie = getCookie('linkedin_profile');
             if (profileCookie) {
                 const profileData = JSON.parse(decodeURIComponent(profileCookie));
-                setProfile({
+                const userProfile = {
                   name: `${profileData.given_name} ${profileData.family_name}`,
                   email: profileData.email,
                   picture: profileData.picture,
-                });
-            } else if (!profile) {
+                };
+                setProfile(userProfile);
+
+                // If this page is in a popup, redirect the main window and close the popup.
+                if (window.opener) {
+                    window.opener.location.href = '/linkedin/profile';
+                    window.close();
+                }
+
+            } else if (!window.opener) { // Only show error if not in a popup context
                  setError("Could not retrieve LinkedIn profile. Please try signing in again.");
             }
         } catch (e) {
@@ -65,13 +80,8 @@ export default function LinkedInProfilePage() {
         } finally {
              setIsLoading(false);
         }
-        
-        // This is a workaround to close the popup if it's still open
-        if (window.opener) {
-            window.close();
-        }
 
-    }, [searchParams, router, profile]);
+    }, [searchParams, router]);
 
     const handleAnalyze = async () => {
         if (!profile) return;
@@ -90,14 +100,14 @@ export default function LinkedInProfilePage() {
         });
     };
 
-    if (isLoading) {
+    if (isLoading && !error) {
         return (
             <div className="flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-1 flex items-center justify-center">
                    <div className="flex flex-col items-center gap-4">
                       <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                      <p className="text-lg">Loading Profile...</p>
+                      <p className="text-lg">Finalizing Authentication...</p>
                     </div>
                 </main>
                 <Footer />
@@ -130,7 +140,7 @@ export default function LinkedInProfilePage() {
             <Header />
             <main className="flex-1 py-12 md:py-20">
                 <div className="container max-w-4xl mx-auto space-y-8">
-                    {profile && (
+                    {profile ? (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="font-headline text-3xl">Your LinkedIn Profile</CardTitle>
@@ -154,6 +164,11 @@ export default function LinkedInProfilePage() {
                                 </Button>
                             </CardContent>
                         </Card>
+                    ) : (
+                         <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            <p className="text-lg">Loading Profile...</p>
+                         </div>
                     )}
 
                     {(isAnalyzing || analysis) && (
