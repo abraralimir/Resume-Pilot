@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { analyzeResumeAgainstJobDescription, AnalyzeResumeAgainstJobDescriptionOutput } from '@/ai/flows/ats-scan-and-score';
 import { enhanceResume, EnhanceResumeOutput } from '@/ai/flows/ai-powered-resume-enhancement';
 import { upgradeResumeWithoutJD, UpgradeResumeWithoutJDOutput } from '@/ai/flows/resume-upgrade-no-jd';
-import { analyzeLinkedInProfile as analyzeLinkedInProfileFlow, LinkedInProfileAnalysis } from '@/ai/flows/linkedin-profile-analyzer';
 import puppeteer from 'puppeteer';
 import htmlToDocx from 'html-to-docx';
 
@@ -64,7 +63,7 @@ export async function getAtsScore(
   if (!validated.success) {
     throw new Error(validated.error.errors.map(e => e.message).join(', '));
   }
-  return await analyzeResumeAgainstJobDescription(validated.data);
+  return await analyzeResumeAgainstJobDescription({resume: validated.data.resume, jobDescriptionText: validated.data.jobDescriptionText});
 }
 
 export async function getEnhancedResume(
@@ -123,17 +122,4 @@ export async function downloadEnhancedResume(resumeMarkdown: string, format: 'pd
         console.error(`Error generating ${format}:`, error);
         throw new Error(`Failed to generate ${format.toUpperCase()} file. Please try again.`);
     }
-}
-
-export async function analyzeLinkedInProfile(profileUrl: string): Promise<LinkedInProfileAnalysis> {
-  const schema = z.object({
-    url: z.string().url("Please enter a valid LinkedIn profile URL.").startsWith("https://www.linkedin.com/in/", "URL must be a valid LinkedIn profile URL."),
-  });
-
-  const validated = schema.safeParse({ url: profileUrl });
-  if (!validated.success) {
-    throw new Error(validated.error.errors.map(e => e.message).join(', '));
-  }
-
-  return await analyzeLinkedInProfileFlow(validated.data.url);
 }
