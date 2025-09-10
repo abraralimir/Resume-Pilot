@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef, useTransition, useCallback, useEffect } from "react";
+import React, { useState, useRef, useTransition, useEffect } from "react";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -11,7 +11,6 @@ import {
   Lightbulb,
   Loader2,
   Sparkles,
-  Linkedin,
 } from "lucide-react";
 import { getAtsScore, getEnhancedResume, downloadEnhancedResume } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -30,42 +29,50 @@ type AtsResult = { atsScore: number; areasForImprovement: string };
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-background");
 
 const CircleProgress = ({ score, text }: { score: number; text: string }) => {
-  const progress = Math.max(0, Math.min(100, score));
-  const circumference = 2 * Math.PI * 55;
-  const offset = circumference - (progress / 100) * circumference;
+    const [progress, setProgress] = useState(0);
+    const circumference = 2 * Math.PI * 55;
 
-  return (
-    <div className="relative flex size-56 items-center justify-center">
-      <svg className="absolute size-full" viewBox="0 0 120 120">
-        <circle
-          className="stroke-current text-border/50"
-          strokeWidth="8"
-          cx="60"
-          cy="60"
-          r="55"
-          fill="transparent"
-        />
-        <circle
-          className="stroke-current text-primary transition-all duration-1000 ease-in-out"
-          strokeWidth="8"
-          strokeLinecap="round"
-          cx="60"
-          cy="60"
-          r="55"
-          fill="transparent"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform="rotate(-90 60 60)"
-        />
-      </svg>
-      <div className="flex flex-col items-center">
-        <span className="font-headline text-5xl font-bold text-foreground">
-          {Math.round(score)}
-        </span>
-        <span className="text-sm font-medium text-muted-foreground">{text}</span>
-      </div>
-    </div>
-  );
+    useEffect(() => {
+        const animation = requestAnimationFrame(() => {
+            setProgress(score);
+        });
+        return () => cancelAnimationFrame(animation);
+    }, [score]);
+
+    const offset = circumference - (progress / 100) * circumference;
+
+    return (
+        <div className="relative flex size-56 items-center justify-center">
+            <svg className="absolute size-full" viewBox="0 0 120 120">
+                <circle
+                    className="stroke-current text-border/50"
+                    strokeWidth="8"
+                    cx="60"
+                    cy="60"
+                    r="55"
+                    fill="transparent"
+                />
+                <circle
+                    className="stroke-current text-primary transition-[stroke-dashoffset] duration-1000 ease-out"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    cx="60"
+                    cy="60"
+                    r="55"
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    transform="rotate(-90 60 60)"
+                />
+            </svg>
+            <div className="flex flex-col items-center">
+                <span className="font-headline text-5xl font-bold text-foreground">
+                    {Math.round(score)}
+                </span>
+                <span className="text-sm font-medium text-muted-foreground">{text}</span>
+            </div>
+        </div>
+    );
 };
 
 
@@ -151,6 +158,7 @@ export function ResumePilotClient() {
     }
     
     startEnhancing(async () => {
+      setAtsResult(null);
       setEnhancedResume("");
       try {
         const result = await getEnhancedResume(
@@ -350,7 +358,7 @@ export function ResumePilotClient() {
 
       {/* Results Sections */}
       <div className="mt-16 space-y-12">
-        {(isScanning || atsResult) && <div className="h-px w-full bg-border"></div>}
+        {(isScanning || atsResult || isEnhancing || enhancedResume) && <div className="h-px w-full bg-border"></div>}
         
         {isScanning && (
              <section>
@@ -358,12 +366,13 @@ export function ResumePilotClient() {
                     <CardTitle className="font-headline text-3xl">Analyzing Your Resume...</CardTitle>
                     <CardDescription>Our AI is calculating your ATS score and identifying key improvements.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center gap-8 pt-6 md:flex-row">
+                <CardContent className="flex flex-col items-center justify-center gap-12 pt-6 md:flex-row">
                     <Skeleton className="size-56 rounded-full" />
                     <div className="w-full flex-1 space-y-4">
-                        <Skeleton className="h-8 w-3/4"/>
-                        <Skeleton className="h-24 w-full"/>
-                        <Skeleton className="h-6 w-5/6"/>
+                        <Skeleton className="h-8 w-3/4 rounded-md"/>
+                        <Skeleton className="h-6 w-full rounded-md"/>
+                        <Skeleton className="h-6 w-5/6 rounded-md"/>
+                        <Skeleton className="h-6 w-full rounded-md"/>
                     </div>
                 </CardContent>
              </section>
@@ -374,15 +383,18 @@ export function ResumePilotClient() {
                 <CardTitle className="font-headline text-3xl">Your ATS Score & Analysis</CardTitle>
                 <CardDescription>Here's how your resume stacks up against the job description.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-12 pt-6 md:flex-row">
+            <CardContent className="flex flex-col items-center gap-12 pt-6 md:flex-row md:items-start">
               <CircleProgress score={atsResult.atsScore} text="ATS SCORE" />
               <div className="flex-1">
-                <Alert className="bg-transparent">
-                  <Lightbulb/>
+                <Alert className="bg-transparent text-base">
+                  <Lightbulb className="h-5 w-5"/>
                   <AlertTitle className="font-headline text-xl">Areas for Improvement</AlertTitle>
-                  <AlertDescription className="mt-2 text-base">
+                  <AlertDescription className="mt-2">
                     <ul className="list-disc space-y-2 pl-5">
-                    {atsResult.areasForImprovement.split('\n').map((line, i) => line.trim().length > 1 && <li key={i}>{line.replace(/^- /, '')}</li>)}
+                    {atsResult.areasForImprovement.split('\n').map((line, i) => {
+                      const trimmedLine = line.trim().replace(/^- /, '');
+                      return trimmedLine.length > 1 && <li key={i}>{trimmedLine}</li>
+                    })}
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -391,7 +403,7 @@ export function ResumePilotClient() {
           </section>
         )}
 
-       {(isEnhancing || enhancedResume) && <div className="h-px w-full bg-border"></div>}
+       {(isEnhancing || enhancedResume) && (!atsResult && !isScanning) && <div className="h-px w-full bg-border"></div>}
 
         {isEnhancing && (
             <section>
@@ -399,8 +411,13 @@ export function ResumePilotClient() {
                   <CardTitle className="font-headline text-3xl">Enhancing Your Resume</CardTitle>
                   <CardDescription>Our AI co-pilot is rewriting your resume for maximum impact.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                    <Skeleton className="h-96 w-full"/>
+              <CardContent className="pt-6 space-y-4">
+                    <Skeleton className="h-8 w-1/4 rounded-md"/>
+                    <Skeleton className="h-6 w-full rounded-md"/>
+                    <Skeleton className="h-6 w-5/6 rounded-md"/>
+                    <br/>
+                    <Skeleton className="h-8 w-1/3 rounded-md"/>
+                    <Skeleton className="h-24 w-full rounded-md"/>
               </CardContent>
             </section>
         )}
@@ -413,7 +430,7 @@ export function ResumePilotClient() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  className="min-h-[600px] font-mono text-sm"
+                  className="min-h-[600px] font-mono text-sm leading-relaxed"
                   value={editedEnhancedResume}
                   onChange={(e) => setEditedEnhancedResume(e.target.value)}
                 />
