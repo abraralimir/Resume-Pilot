@@ -5,72 +5,69 @@ import React, { useState, useRef, useTransition } from "react";
 import Image from "next/image";
 import {
   ArrowDown,
-  CheckCircle,
   Clipboard,
   Download,
   FileText,
   Lightbulb,
   Loader2,
   Sparkles,
-  UploadCloud,
-  XCircle,
+  Upload,
 } from "lucide-react";
 import { getAtsScore, getEnhancedResume } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "./ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type AtsResult = { atsScore: number; areasForImprovement: string };
-type EnhancedResult = { enhancedResume: string };
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-background");
 
 const CircleProgress = ({ score }: { score: number }) => {
   const progress = Math.max(0, Math.min(100, score));
-  const circumference = 2 * Math.PI * 45;
+  const circumference = 2 * Math.PI * 55;
   const offset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="relative flex size-48 items-center justify-center">
-      <svg className="absolute size-full" viewBox="0 0 100 100">
+    <div className="relative flex size-56 items-center justify-center">
+      <svg className="absolute size-full" viewBox="0 0 120 120">
         <circle
-          className="stroke-current text-border"
+          className="stroke-current text-border/50"
           strokeWidth="8"
-          cx="50"
-          cy="50"
-          r="45"
+          cx="60"
+          cy="60"
+          r="55"
           fill="transparent"
         />
         <circle
-          className="stroke-current text-primary transition-all duration-1000 ease-out"
+          className="stroke-current text-primary transition-all duration-1000 ease-in-out"
           strokeWidth="8"
           strokeLinecap="round"
-          cx="50"
-          cy="50"
-          r="45"
+          cx="60"
+          cy="60"
+          r="55"
           fill="transparent"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          transform="rotate(-90 50 50)"
+          transform="rotate(-90 60 60)"
         />
       </svg>
-      <span className="font-headline text-5xl font-bold text-foreground">
-        {Math.round(score)}
-      </span>
+      <div className="flex flex-col items-center">
+        <span className="font-headline text-5xl font-bold text-foreground">
+          {Math.round(score)}
+        </span>
+        <span className="text-sm font-medium text-muted-foreground">ATS SCORE</span>
+      </div>
     </div>
   );
 };
+
 
 export function ResumePilotClient() {
   const [resume, setResume] = useState("");
@@ -95,7 +92,7 @@ export function ResumePilotClient() {
 
 
   const handleScrollToTool = () => {
-    mainToolRef.current?.scrollIntoView({ behavior: "smooth" });
+    mainToolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleScan = () => {
@@ -122,7 +119,7 @@ export function ResumePilotClient() {
       try {
         const result = await getAtsScore(resume, jobDescription);
         setAtsResult(result);
-        setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: 'center' }), 100);
       } catch (error) {
         toast({
           variant: "destructive",
@@ -153,7 +150,7 @@ export function ResumePilotClient() {
         );
         setEnhancedResume(result.enhancedResume);
         setEditedEnhancedResume(result.enhancedResume);
-        setTimeout(() => enhanceRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        setTimeout(() => enhanceRef.current?.scrollIntoView({ behavior: "smooth", block: 'center' }), 100);
       } catch (error) {
         toast({
           variant: "destructive",
@@ -187,184 +184,196 @@ export function ResumePilotClient() {
     }
   };
 
+  const handleFileUploadClick = () => {
+    toast({
+        title: "Feature Not Available",
+        description: "File upload is simulated. Please paste your resume text directly.",
+      });
+  }
+
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 md:py-16">
+    <div className="container mx-auto max-w-6xl px-4 py-12 md:py-20">
       {/* Hero Section */}
-      <section className="relative mb-16 flex flex-col items-center justify-center text-center">
+      <section className="relative mb-20 flex flex-col items-center justify-center text-center">
         {heroImage && (
           <Image
             src={heroImage.imageUrl}
             alt={heroImage.description}
             fill
-            className="absolute inset-0 -z-10 object-cover opacity-10"
+            className="absolute inset-0 -z-10 object-cover opacity-[0.03]"
             data-ai-hint={heroImage.imageHint}
             priority
           />
         )}
-        <div className="absolute inset-0 -z-20 bg-gradient-to-b from-background via-transparent to-background"></div>
+        <div className="absolute inset-0 -z-20 bg-gradient-to-b from-transparent via-transparent to-background"></div>
 
         <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-          Navigate Your Career Path
+          Land Your Dream Job
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Instantly score your resume against any job, then let our AI co-pilot
-          enhance it to perfection.
+        <p className="mt-6 max-w-3xl text-lg text-muted-foreground md:text-xl">
+          Instantly score your resume against any job description, then let our AI co-pilot
+          optimize it for success. Beat the bots and impress recruiters.
         </p>
         <Button size="lg" className="mt-8" onClick={handleScrollToTool}>
-          Get Started <ArrowDown className="ml-2 h-5 w-5" />
+          Get Started Now <ArrowDown className="ml-2 h-5 w-5" />
         </Button>
       </section>
 
       {/* Main Tool Section */}
-      <section ref={mainToolRef} className="space-y-8">
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">
-              1. Provide Your Documents
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-8 md:grid-cols-2">
+      <section ref={mainToolRef} className="scroll-mt-20 space-y-12">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Resume Input */}
-            <div className="space-y-2">
-              <Label htmlFor="resume-input" className="text-lg">
-                Your Resume
-              </Label>
-              <div className="group relative">
+            <Card className="flex flex-col border-2 border-primary/20 bg-transparent shadow-lg shadow-primary/5">
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl">1. Your Resume</CardTitle>
+                <CardDescription>Paste your resume below or upload a file.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col">
                 <Textarea
                   id="resume-input"
-                  placeholder="Paste your resume here..."
-                  className="min-h-[400px] resize-y"
+                  placeholder="Paste your full resume here..."
+                  className="min-h-[400px] flex-1 resize-y text-base"
                   value={resume}
                   onChange={(e) => setResume(e.target.value)}
                 />
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-transparent bg-background/80 opacity-0 transition-opacity group-focus-within:opacity-0 group-hover:opacity-100">
-                    <UploadCloud className="mb-2 h-10 w-10 text-muted-foreground" />
-                    <p className="font-semibold text-muted-foreground">Upload PDF, DOCX, or Image</p>
-                    <p className="text-sm text-muted-foreground/80">(Feature simulated: paste text directly)</p>
-                </div>
-              </div>
-            </div>
+                 <Button variant="outline" className="mt-4 w-full" onClick={handleFileUploadClick}>
+                    <Upload className="mr-2"/>
+                    Upload File (PDF, DOCX)
+                </Button>
+              </CardContent>
+            </Card>
 
-            {/* Job Description/Role Input */}
-            <div className="space-y-4">
-              <Label className="text-lg">Job Target</Label>
-               <RadioGroup
-                  value={jobInputMode}
-                  onValueChange={(v) =>
-                    setJobInputMode(v as "description" | "role")
-                  }
-                  className="space-y-4"
-                >
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="description" id="r-desc" />
-                      <Label htmlFor="r-desc">Job Description</Label>
-                    </div>
-                     <div className="group relative mt-2">
-                      <Textarea
-                        id="jd-input"
-                        placeholder="Paste the job description here..."
-                        className="min-h-[260px] resize-y"
-                        value={jobDescription}
-                        onChange={(e) => setJobDescription(e.target.value)}
-                        disabled={jobInputMode !== 'description'}
-                      />
-                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-transparent bg-background/80 opacity-0 transition-opacity group-focus-within:opacity-0 group-hover:opacity-100">
-                          <FileText className="mb-2 h-10 w-10 text-muted-foreground" />
-                          <p className="font-semibold text-muted-foreground">Paste from any source</p>
-                          <p className="text-sm text-muted-foreground/80">LinkedIn, Google Docs, etc.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="role" id="r-role" />
-                      <Label htmlFor="r-role">Desired Job Role</Label>
-                    </div>
-                    <Input
-                      id="role-input"
-                      placeholder="e.g., Senior Software Engineer"
-                      className="mt-2 text-base"
-                      value={jobRole}
-                      onChange={(e) => setJobRole(e.target.value)}
-                      disabled={jobInputMode !== 'role'}
-                    />
-                     <p className="mt-2 text-sm text-muted-foreground">
-                      No job description? No problem.
-                    </p>
-                  </div>
+            {/* Job Target Input */}
+            <Card className="flex flex-col border-border bg-transparent">
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl">2. Job Target</CardTitle>
+                 <CardDescription>Provide a job description or just a role title.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col">
+                <RadioGroup
+                    value={jobInputMode}
+                    onValueChange={(v) =>
+                      setJobInputMode(v as "description" | "role")
+                    }
+                    className="mb-4 flex gap-4"
+                  >
+                      <Label htmlFor="r-desc" className={`flex-1 cursor-pointer rounded-md border p-4 text-center transition-all ${jobInputMode === 'description' ? 'border-primary bg-primary/10' : 'hover:bg-accent'}`}>
+                        <RadioGroupItem value="description" id="r-desc" className="sr-only" />
+                        <FileText className="mx-auto mb-2 h-6 w-6" />
+                        Job Description
+                      </Label>
+                      <Label htmlFor="r-role" className={`flex-1 cursor-pointer rounded-md border p-4 text-center transition-all ${jobInputMode === 'role' ? 'border-primary bg-primary/10' : 'hover:bg-accent'}`}>
+                        <RadioGroupItem value="role" id="r-role" className="sr-only" />
+                        <Sparkles className="mx-auto mb-2 h-6 w-6" />
+                        Job Role
+                      </Label>
                 </RadioGroup>
-            </div>
-          </CardContent>
-        </Card>
+                
+                <div className="flex-1">
+                   <Textarea
+                      id="jd-input"
+                      placeholder="Paste the job description here for the most accurate analysis..."
+                      className={`min-h-[260px] flex-1 resize-y text-base ${jobInputMode !== 'description' ? 'hidden' : ''}`}
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      disabled={jobInputMode !== 'description'}
+                    />
+
+                    <div className={`flex h-full flex-col justify-center ${jobInputMode !== 'role' ? 'hidden' : ''}`}>
+                       <Label htmlFor="role-input" className="mb-2 text-base">Desired Job Role</Label>
+                       <Input
+                        id="role-input"
+                        placeholder="e.g., Senior Software Engineer"
+                        className="text-base"
+                        value={jobRole}
+                        onChange={(e) => setJobRole(e.target.value)}
+                        disabled={jobInputMode !== 'role'}
+                      />
+                       <p className="mt-2 text-sm text-muted-foreground">
+                        No job description? No problem. We'll optimize your resume for this role.
+                      </p>
+                    </div>
+                </div>
+
+              </CardContent>
+            </Card>
+        </div>
         
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" onClick={handleScan} disabled={isScanning || jobInputMode === 'role'}>
-                {isScanning ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Scanning...</>) : (<>ATS Scan</>)}
-            </Button>
-            <Button size="lg" variant="outline" onClick={handleEnhance} disabled={isEnhancing}>
-                {isEnhancing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Enhancing...</>) : (<><Sparkles className="mr-2 h-5 w-5"/> AI Enhance</>)}
-            </Button>
+        <div className="flex flex-col items-center gap-4 rounded-lg border bg-card p-6 sm:flex-row sm:justify-center">
+            <p className="flex-1 text-center text-lg font-medium sm:text-left">Ready to see your results?</p>
+            <div className="flex flex-col items-center gap-4 sm:flex-row">
+              <Button size="lg" onClick={handleScan} disabled={isScanning || isEnhancing || jobInputMode === 'role'}>
+                  {isScanning ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Scanning...</>) : (<>ATS Scan</>)}
+              </Button>
+              <Button size="lg" variant="default" onClick={handleEnhance} disabled={isEnhancing || isScanning}>
+                  {isEnhancing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Enhancing...</>) : (<><Sparkles className="mr-2 h-5 w-5"/> AI Enhance Resume</>)}
+              </Button>
+            </div>
         </div>
       </section>
 
       {/* Results Sections */}
-      <div className="mt-12 space-y-8">
+      <div className="mt-16 space-y-12">
+        {(isScanning || atsResult) && <div className="h-px w-full bg-border"></div>}
+        
         {isScanning && (
-             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">2. ATS Score & Analysis</CardTitle>
+             <section>
+                <CardHeader className="text-center">
+                    <CardTitle className="font-headline text-3xl">Analyzing Your Resume...</CardTitle>
+                    <CardDescription>Our AI is calculating your ATS score and identifying key improvements.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center gap-8 md:flex-row">
-                    <Skeleton className="size-48 rounded-full" />
+                <CardContent className="flex flex-col items-center justify-center gap-8 pt-6 md:flex-row">
+                    <Skeleton className="size-56 rounded-full" />
                     <div className="w-full flex-1 space-y-4">
                         <Skeleton className="h-8 w-3/4"/>
-                        <Skeleton className="h-6 w-full"/>
-                        <Skeleton className="h-6 w-full"/>
+                        <Skeleton className="h-24 w-full"/>
                         <Skeleton className="h-6 w-5/6"/>
                     </div>
                 </CardContent>
-             </Card>
+             </section>
         )}
         {atsResult && (
-          <div ref={resultsRef}>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">2. ATS Score & Analysis</CardTitle>
-                </CardHeader>
-              <CardContent className="flex flex-col items-center gap-8 md:flex-row">
-                <CircleProgress score={atsResult.atsScore} />
-                <div className="flex-1">
-                  <Alert>
-                    <Lightbulb className="h-4 w-4" />
-                    <AlertTitle className="font-semibold">Areas for Improvement</AlertTitle>
-                    <AlertDescription>
-                      <ul className="list-disc pl-5">
-                      {atsResult.areasForImprovement.split('\n').map((line, i) => line.trim() && <li key={i}>{line.replace(/^- /, '')}</li>)}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <section ref={resultsRef} className="scroll-mt-20">
+             <CardHeader className="text-center">
+                <CardTitle className="font-headline text-3xl">Your ATS Score & Analysis</CardTitle>
+                <CardDescription>Here's how your resume stacks up against the job description.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-12 pt-6 md:flex-row">
+              <CircleProgress score={atsResult.atsScore} />
+              <div className="flex-1">
+                <Alert className="bg-transparent">
+                  <Lightbulb/>
+                  <AlertTitle className="font-headline text-xl">Areas for Improvement</AlertTitle>
+                  <AlertDescription className="mt-2 text-base">
+                    <ul className="list-disc space-y-2 pl-5">
+                    {atsResult.areasForImprovement.split('\n').map((line, i) => line.trim().length > 1 && <li key={i}>{line.replace(/^- /, '')}</li>)}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </CardContent>
+          </section>
         )}
 
+       {(isEnhancing || enhancedResume) && <div className="h-px w-full bg-border"></div>}
+
         {isEnhancing && (
-             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">3. Your Enhanced Resume</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <Skeleton className="h-96 w-full"/>
-                </CardContent>
-            </Card>
+            <section>
+              <CardHeader className="text-center">
+                  <CardTitle className="font-headline text-3xl">Enhancing Your Resume</CardTitle>
+                  <CardDescription>Our AI co-pilot is rewriting your resume for maximum impact.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                    <Skeleton className="h-96 w-full"/>
+              </CardContent>
+            </section>
         )}
         {enhancedResume && (
-          <div ref={enhanceRef}>
-            <Card>
+          <section ref={enhanceRef} className="scroll-mt-20">
+            <Card className="bg-transparent">
               <CardHeader>
-                <CardTitle className="font-headline text-2xl">3. Your Enhanced Resume</CardTitle>
+                <CardTitle className="font-headline text-3xl">Your Enhanced Resume</CardTitle>
+                <CardDescription>Ready to apply! You can make final edits below, then copy or download.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
@@ -378,7 +387,7 @@ export function ResumePilotClient() {
                         toast({title: "Copied to clipboard!"})
                    }}>
                         <Clipboard className="mr-2 h-4 w-4" />
-                        Copy
+                        Copy Text
                     </Button>
                   <Button onClick={() => handleDownload("txt")}>
                     <Download className="mr-2 h-4 w-4" />
@@ -395,7 +404,7 @@ export function ResumePilotClient() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </section>
         )}
       </div>
     </div>

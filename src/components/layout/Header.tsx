@@ -2,11 +2,11 @@ import { Logo } from "@/components/icons";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 max-w-6xl items-center">
         <div className="mr-4 flex items-center">
-          <Logo className="h-6 w-6 text-primary" />
-          <span className="ml-2 font-headline text-lg font-bold">ResumePilot</span>
+          <Logo className="h-7 w-7 text-primary" />
+          <span className="ml-3 font-headline text-xl font-bold">ResumePilot</span>
         </div>
       </div>
     </header>
