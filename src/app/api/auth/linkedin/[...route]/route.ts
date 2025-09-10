@@ -35,11 +35,6 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
 
     const codeChallenge = base64URLEncode(sha256(codeVerifier));
     
-    // Store state and code verifier in cookies
-    const cookies = new NextResponse().cookies;
-    cookies.set('linkedin_state', state, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' }); // 10 minutes
-    cookies.set('linkedin_code_verifier', codeVerifier, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' });
-
     const authUrlParams = new URLSearchParams({
         response_type: 'code',
         client_id: LINKEDIN_CLIENT_ID!,
@@ -52,10 +47,13 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
 
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?${authUrlParams.toString()}`;
     
-    // Create a response to redirect and set the cookies
+    // Create a response to redirect AND set the cookies
     const response = NextResponse.redirect(authUrl);
-    response.cookies.set(cookies.get('linkedin_state')!);
-    response.cookies.set(cookies.get('linkedin_code_verifier')!);
+    
+    // Set cookies on the response object that will actually be returned
+    response.cookies.set('linkedin_state', state, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' }); // 10 minutes
+    response.cookies.set('linkedin_code_verifier', codeVerifier, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' });
+
     return response;
   }
 
