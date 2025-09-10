@@ -34,7 +34,6 @@ export async function getAccessToken(code: string): Promise<{ access_token: stri
 }
 
 export async function getProfileData(accessToken: string): Promise<any> {
-    // This endpoint fetches the profile fields available under the 'openid', 'profile', and 'email' scopes.
     const profileUrl = 'https://api.linkedin.com/v2/userinfo';
 
     const response = await fetch(profileUrl, {

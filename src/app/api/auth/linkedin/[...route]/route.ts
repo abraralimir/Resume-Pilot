@@ -3,14 +3,13 @@ import {NextRequest, NextResponse} from 'next/server';
 import { getAccessToken, getProfileData } from '@/app/services/linkedin';
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
-// The redirect URI now points to our API callback handler. This must match the one in linkedin.ts
+// This redirect URI must exactly match the one in your LinkedIn app settings and the one used to get the access token.
 const REDIRECT_URI = 'http://localhost:9002/api/auth/linkedin/callback';
 
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
   const route = params.route[0];
 
   if (route === 'signin') {
-    // The 'profile' scope is deprecated, using 'openid profile email' which are part of the new standard.
     const scope = 'openid profile email';
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
     return NextResponse.redirect(authUrl);
@@ -30,13 +29,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return NextResponse.redirect(`http://localhost:9002/linkedin/callback?error=no_code&error_description=Authorization code not found.`);
     }
 
-    // Since we are now handling the callback on the server, we can directly
-    // exchange the code for profile data here.
     try {
         const { access_token } = await getAccessToken(code);
         const profileData = await getProfileData(access_token);
         
-        // We'll pass the data via query params to the client-side page
         const clientCallbackUrl = new URL('http://localhost:9002/linkedin/callback');
         clientCallbackUrl.searchParams.set('profile', JSON.stringify(profileData));
 
