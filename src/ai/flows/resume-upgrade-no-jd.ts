@@ -19,7 +19,7 @@ const UpgradeResumeWithoutJDSchema = z.object({
 export type UpgradeResumeWithoutJDInput = z.infer<typeof UpgradeResumeWithoutJDSchema>;
 
 const UpgradeResumeWithoutJDOutputSchema = z.object({
-  enhancedResume: z.string().describe('The upgraded resume text, optimized for the specified job type.'),
+  enhancedResume: z.string().describe('The upgraded resume text, formatted in Markdown and optimized for the specified job type.'),
 });
 
 export type UpgradeResumeWithoutJDOutput = z.infer<typeof UpgradeResumeWithoutJDOutputSchema>;
@@ -39,14 +39,15 @@ const upgradeResumeWithoutJDPrompt = ai.definePrompt({
   1.  Identifying relevant keywords and skills for the specified job type.
   2.  Incorporating those keywords and skills into the resume in a natural and compelling way.
   3.  Improving the phrasing and overall presentation of the resume to make it more appealing to recruiters and hiring managers.
-  4. Ensuring that the core information of the resume like name, contact details are not altered.
+  4.  Ensuring that the core information of the resume like name, contact details are not altered.
+  5.  Formatting the final output in Markdown with professional headings (e.g., ## Experience), bullet points for lists, and appropriate line breaks for readability.
 
   Here's the resume text:
   {{{resumeText}}}
 
   The user is seeking a job as a: {{{jobType}}}
 
-  Provide the enhanced resume text:
+  Provide the enhanced resume text (in Markdown):
   `,
 });
 
