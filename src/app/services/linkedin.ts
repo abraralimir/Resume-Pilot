@@ -3,7 +3,8 @@
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:9002/api/auth/linkedin/callback';
+// Ensure this redirect URI matches the one in your LinkedIn Developer App settings AND the one used to initiate the login.
+const REDIRECT_URI = 'http://localhost:9002/linkedin/callback';
 
 export async function getAccessToken(code: string): Promise<{ access_token: string }> {
   const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
@@ -25,6 +26,7 @@ export async function getAccessToken(code: string): Promise<{ access_token: stri
 
   if (!response.ok) {
     const errorData = await response.json();
+    console.error("LinkedIn getAccessToken error:", errorData);
     throw new Error(`Failed to get access token: ${errorData.error_description || response.statusText}`);
   }
 
@@ -32,6 +34,7 @@ export async function getAccessToken(code: string): Promise<{ access_token: stri
 }
 
 export async function getProfileData(accessToken: string): Promise<any> {
+    // This endpoint fetches the profile fields available under the 'openid', 'profile', and 'email' scopes.
     const profileUrl = 'https://api.linkedin.com/v2/userinfo';
 
     const response = await fetch(profileUrl, {
@@ -41,8 +44,12 @@ export async function getProfileData(accessToken: string): Promise<any> {
     });
 
     if (!response.ok) {
+        const errorData = await response.json();
+        console.error("LinkedIn getProfileData error:", errorData);
         throw new Error('Failed to fetch profile data from LinkedIn');
     }
 
     return response.json();
 }
+
+    
