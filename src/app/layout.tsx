@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { Analytics } from '@vercel/analytics/next';
 
 const APP_NAME = 'ResumePilot';
 const APP_DEFAULT_TITLE = 'ResumePilot | AI-Powered ATS Resume Scanner & Enhancer';
@@ -59,6 +60,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
