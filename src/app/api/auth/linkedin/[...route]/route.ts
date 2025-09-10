@@ -1,4 +1,3 @@
-
 'use server';
 
 import {NextRequest, NextResponse} from 'next/server';
@@ -27,14 +26,14 @@ function sha256(buffer: string): Buffer {
 
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
   const route = params.route[0];
-  
+
   if (route === 'signin') {
     // --- Step 1: Generate and store state and code verifier ---
     const state = crypto.randomBytes(16).toString('hex');
     const codeVerifier = base64URLEncode(crypto.randomBytes(32));
 
     const codeChallenge = base64URLEncode(sha256(codeVerifier));
-    
+
     const authUrlParams = new URLSearchParams({
         response_type: 'code',
         client_id: LINKEDIN_CLIENT_ID!,
@@ -46,10 +45,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     });
 
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?${authUrlParams.toString()}`;
-    
+
     // Create a response to redirect AND set the cookies
     const response = NextResponse.redirect(authUrl);
-    
+
     // Set cookies on the response object that will actually be returned
     response.cookies.set('linkedin_state', state, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' }); // 10 minutes
     response.cookies.set('linkedin_code_verifier', codeVerifier, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', maxAge: 60 * 10, path: '/' });
@@ -66,53 +65,58 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     // --- Step 2: Retrieve state and code verifier from cookies ---
     const storedState = req.cookies.get('linkedin_state')?.value;
     const storedCodeVerifier = req.cookies.get('linkedin_code_verifier')?.value;
-    
-    const clientCallbackUrl = new URL(`${APP_URL}/linkedin/callback`);
-    
-    // Create a response object that we can modify and return
-    const response = NextResponse.redirect(clientCallbackUrl.toString());
+
+    const clientCallbackUrl = new URL(`${APP_URL}/linkedin/profile`);
 
     // --- Step 3: Validate state ---
     if (error || !state || !storedState || state !== storedState) {
       const errorDescription = searchParams.get('error_description') || 'Invalid state or an error occurred.';
       clientCallbackUrl.searchParams.set('error', error || 'state_mismatch');
       clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorDescription));
+      const response = NextResponse.redirect(clientCallbackUrl.toString());
        // Clear cookies on error
       response.cookies.delete('linkedin_state');
       response.cookies.delete('linkedin_code_verifier');
-      response.headers.set('Location', clientCallbackUrl.toString());
       return response;
     }
 
     if (!code) {
         clientCallbackUrl.searchParams.set('error', 'no_code');
         clientCallbackUrl.searchParams.set('error_description', 'Authorization code not found.');
+        const response = NextResponse.redirect(clientCallbackUrl.toString());
         response.cookies.delete('linkedin_state');
         response.cookies.delete('linkedin_code_verifier');
-        response.headers.set('Location', clientCallbackUrl.toString());
         return response;
     }
 
     if (!storedCodeVerifier) {
         clientCallbackUrl.searchParams.set('error', 'no_code_verifier');
         clientCallbackUrl.searchParams.set('error_description', 'Code verifier not found. Your session may have expired.');
+        const response = NextResponse.redirect(clientCallbackUrl.toString());
         response.cookies.delete('linkedin_state');
         response.cookies.delete('linkedin_code_verifier');
-        response.headers.set('Location', clientCallbackUrl.toString());
         return response;
     }
-    
-    // Clear cookies after retrieving them, as they are single-use
-    response.cookies.delete('linkedin_state');
-    response.cookies.delete('linkedin_code_verifier');
 
     try {
         // --- Step 4: Exchange code for access token ---
         const { access_token } = await getAccessToken(code, REDIRECT_URI, storedCodeVerifier);
         const profileData = await getProfileData(access_token);
+
+        const response = NextResponse.redirect(clientCallbackUrl.toString());
         
-        clientCallbackUrl.searchParams.set('profile', JSON.stringify(profileData));
-        response.headers.set('Location', clientCallbackUrl.toString());
+        // Store profile data in a secure, http-only cookie
+        response.cookies.set('linkedin_profile', JSON.stringify(profileData), {
+          httpOnly: true,
+          secure: process.env.NODE_ENV !== 'development',
+          maxAge: 60 * 60, // 1 hour
+          path: '/',
+        });
+
+        // Clear state and verifier cookies as they are single-use
+        response.cookies.delete('linkedin_state');
+        response.cookies.delete('linkedin_code_verifier');
+        
         return response;
 
     } catch (err) {
@@ -120,7 +124,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         const errorMessage = (err instanceof Error) ? err.message : 'Failed to fetch LinkedIn profile data.';
         clientCallbackUrl.searchParams.set('error', 'exchange_failed');
         clientCallbackUrl.searchParams.set('error_description', encodeURIComponent(errorMessage));
-        response.headers.set('Location', clientCallbackUrl.toString());
+        const response = NextResponse.redirect(clientCallbackUrl.toString());
         return response;
     }
   }

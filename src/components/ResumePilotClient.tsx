@@ -90,64 +90,9 @@ export function ResumePilotClient() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const enhanceRef = useRef<HTMLDivElement>(null);
   const mainToolRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Basic security: check the origin of the message
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      const { type, data } = event.data;
-      if (type === 'linkedin-profile' && data) {
-        // Format the received LinkedIn profile data into a resume string
-        const formattedResume = `
-# ${data.given_name} ${data.family_name}
-
-Email: ${data.email}
-
-## LinkedIn Profile
-This resume was generated from a LinkedIn profile.
-
-## Summary
-(You can add a professional summary here)
-
-## Experience
-(Experience details from LinkedIn would go here. The basic API does not provide this.)
-
-## Education
-(Education details from LinkedIn would go here. The basic API does not provide this.)
-        `.trim();
-        
-        setResumeText(formattedResume);
-        toast({
-          title: "LinkedIn Profile Imported!",
-          description: "Your basic profile data has been populated. You may need to add experience and education manually.",
-        });
-         mainToolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [toast]);
   
   const handleScrollToTool = () => {
     mainToolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const handleLinkedInImport = () => {
-    const width = 600, height = 700;
-    const left = (window.innerWidth / 2) - (width / 2);
-    const top = (window.innerHeight / 2) - (height / 2);
-    window.open(
-        '/api/auth/linkedin/signin', 
-        'linkedin-auth', 
-        `width=${width},height=${height},top=${top},left=${left}`
-    );
   };
 
   const handleScan = () => {
@@ -321,16 +266,12 @@ This resume was generated from a LinkedIn profile.
                         <CardTitle className="font-headline text-2xl">1. Your Resume</CardTitle>
                         <CardDescription>Paste your full resume text below.</CardDescription>
                     </div>
-                     <Button variant="secondary" onClick={handleLinkedInImport}>
-                        <Linkedin className="mr-2 h-4 w-4" />
-                        Analyze LinkedIn Profile
-                    </Button>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col">
                 <Textarea
                   id="resume-input"
-                  placeholder="Paste your full resume here, or import from LinkedIn..."
+                  placeholder="Paste your full resume here..."
                   className="min-h-[400px] flex-1 resize-y text-base"
                   value={resumeText}
                   onChange={(e) => setResumeText(e.target.value)}
