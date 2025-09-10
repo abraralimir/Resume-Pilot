@@ -4,6 +4,61 @@ import { z } from 'zod';
 import { analyzeResumeAgainstJobDescription, AnalyzeResumeAgainstJobDescriptionOutput } from '@/ai/flows/ats-scan-and-score';
 import { enhanceResume, EnhanceResumeOutput } from '@/ai/flows/ai-powered-resume-enhancement';
 import { upgradeResumeWithoutJD, UpgradeResumeWithoutJDOutput } from '@/ai/flows/resume-upgrade-no-jd';
+import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
+import puppeteer from 'puppeteer';
+import htmlToDocx from 'html-to-docx';
+
+// Helper function to convert Markdown to basic HTML
+function markdownToHtml(markdown: string): string {
+    let html = markdown
+        // Headers
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+        .replace(/__(.*)__/gim, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.*)\*/gim, '<em>$1</em>')
+        .replace(/_(.*)_/gim, '<em>$1</em>')
+        // Unordered lists
+        .replace(/^\s*[-*+] (.*)/gim, '<li>$1</li>')
+        .replace(/<\/li>\n<li>/gim, '</li><li>')
+        .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
+        .replace(/<\/ul>\n<ul>/g, '')
+        // Paragraphs
+        .replace(/\n\n/g, '<p>')
+        .replace(/<p>$/g, '')
+         // Line breaks
+        .replace(/\n/g, '<br>');
+
+    return `
+    <html>
+      <head>
+        <style>
+          body { font-family: sans-serif; line-height: 1.5; }
+          h1, h2, h3 { color: #333; }
+          ul { padding-left: 20px; }
+          li { margin-bottom: 5px; }
+        </style>
+      </head>
+      <body>${html}</body>
+    </html>
+  `;
+}
+
+export async function parseResumeFile(fileBuffer: ArrayBuffer, fileType: string): Promise<{ text: string }> {
+    if (fileType === 'application/pdf') {
+        const data = await pdf(Buffer.from(fileBuffer));
+        return { text: data.text };
+    } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const { value } = await mammoth.extractRawText({ buffer: Buffer.from(fileBuffer) });
+        return { text: value };
+    } else {
+        throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+    }
+}
+
 
 export async function getAtsScore(
   resumeText: string,
@@ -48,5 +103,23 @@ export async function getEnhancedResume(
         return await upgradeResumeWithoutJD(validated.data);
     } else {
         throw new Error("Either a job description or a desired job role must be provided.");
+    }
+}
+
+export async function downloadEnhancedResume(resumeMarkdown: string, format: 'pdf' | 'docx'): Promise<string> {
+    const resumeHtml = markdownToHtml(resumeMarkdown);
+
+    if (format === 'pdf') {
+        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox']});
+        const page = await browser.newPage();
+        await page.setContent(resumeHtml, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+        await browser.close();
+        return pdfBuffer.toString('base64');
+    } else if (format === 'docx') {
+        const docxBuffer = await htmlToDocx(resumeHtml);
+        return (docxBuffer as Buffer).toString('base64');
+    } else {
+        throw new Error('Unsupported download format.');
     }
 }

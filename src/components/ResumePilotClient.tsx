@@ -13,7 +13,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { getAtsScore, getEnhancedResume } from "@/app/actions";
+import { getAtsScore, getEnhancedResume, parseResumeFile, downloadEnhancedResume } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -81,14 +81,17 @@ export function ResumePilotClient() {
   const [enhancedResume, setEnhancedResume] = useState<string>("");
   const [editedEnhancedResume, setEditedEnhancedResume] = useState("");
   
+  const [isParsing, startParsingTransition] = useTransition();
   const [isScanning, startScanning] = useTransition();
   const [isEnhancing, startEnhancing] = useTransition();
+  const [isDownloading, startDownloading] = useTransition();
 
   const { toast } = useToast();
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const enhanceRef = useRef<HTMLDivElement>(null);
   const mainToolRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const handleScrollToTool = () => {
@@ -162,6 +165,8 @@ export function ResumePilotClient() {
   };
 
   const handleDownload = (format: "txt" | "pdf" | "docx") => {
+    if (!editedEnhancedResume) return;
+
     if (format === "txt") {
       const blob = new Blob([editedEnhancedResume], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
@@ -175,21 +180,78 @@ export function ResumePilotClient() {
       toast({
         title: "Download Started",
         description: "Your .txt resume is downloading."
-      })
-    } else {
-      toast({
-        title: "Feature Coming Soon",
-        description: `Downloading as ${format.toUpperCase()} will be available in a future update.`,
       });
+      return;
     }
+
+    startDownloading(async () => {
+      try {
+        toast({ title: "Generating Download", description: `Your ${format.toUpperCase()} file is being prepared...` });
+        const base64 = await downloadEnhancedResume(editedEnhancedResume, format);
+        const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: mimeType});
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `resume-pilot.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Complete",
+          description: `Your resume has been downloaded as a .${format} file.`,
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Download Failed",
+          description: (error as Error).message,
+        });
+      }
+    });
   };
 
-  const handleFileUploadClick = () => {
-    toast({
-        title: "Feature Not Available",
-        description: "File upload is simulated. Please paste your resume text directly.",
-      });
-  }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const arrayBuffer = e.target?.result;
+      if (arrayBuffer instanceof ArrayBuffer) {
+        startParsingTransition(async () => {
+          try {
+            toast({title: "Parsing Resume", description: "Reading your resume file..."});
+            const result = await parseResumeFile(arrayBuffer, file.type);
+            setResume(result.text);
+            toast({title: "Resume Parsed", description: "Your resume has been loaded."});
+          } catch(error) {
+             toast({
+              variant: "destructive",
+              title: "File Read Failed",
+              description: (error as Error).message,
+            });
+          } finally {
+            // Reset file input
+            if(fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+          }
+        });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12 md:py-20">
@@ -226,7 +288,7 @@ export function ResumePilotClient() {
             <Card className="flex flex-col border-2 border-primary/20 bg-transparent shadow-lg shadow-primary/5">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">1. Your Resume</CardTitle>
-                <CardDescription>Paste your resume below or upload a file.</CardDescription>
+                <CardDescription>Paste your resume or upload a file.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col">
                 <Textarea
@@ -235,10 +297,27 @@ export function ResumePilotClient() {
                   className="min-h-[400px] flex-1 resize-y text-base"
                   value={resume}
                   onChange={(e) => setResume(e.target.value)}
+                  disabled={isParsing}
                 />
-                 <Button variant="outline" className="mt-4 w-full" onClick={handleFileUploadClick}>
-                    <Upload className="mr-2"/>
-                    Upload File (PDF, DOCX)
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept=".pdf,.docx"
+                    disabled={isParsing}
+                  />
+                 <Button 
+                    variant="outline" 
+                    className="mt-4 w-full" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isParsing}
+                  >
+                    {isParsing ? (
+                        <><Loader2 className="mr-2 animate-spin"/> Parsing...</>
+                    ) : (
+                        <><Upload className="mr-2"/> Upload File (PDF, DOCX)</>
+                    )}
                 </Button>
               </CardContent>
             </Card>
@@ -389,16 +468,16 @@ export function ResumePilotClient() {
                         <Clipboard className="mr-2 h-4 w-4" />
                         Copy Text
                     </Button>
-                  <Button onClick={() => handleDownload("txt")}>
+                  <Button onClick={() => handleDownload("txt")} disabled={isDownloading}>
                     <Download className="mr-2 h-4 w-4" />
                     Download .txt
                   </Button>
-                   <Button variant="secondary" onClick={() => handleDownload("pdf")}>
-                    <Download className="mr-2 h-4 w-4" />
+                   <Button variant="secondary" onClick={() => handleDownload("pdf")} disabled={isDownloading}>
+                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
                     Download .pdf
                   </Button>
-                   <Button variant="secondary" onClick={() => handleDownload("docx")}>
-                    <Download className="mr-2 h-4 w-4" />
+                   <Button variant="secondary" onClick={() => handleDownload("docx")} disabled={isDownloading}>
+                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
                     Download .docx
                   </Button>
                 </div>
