@@ -11,11 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const UpgradeResumeWithoutJDSchema = z.object({
-  resume: z
-    .string()
-    .describe(
-      "The user's resume, which can be either plain text or a data URI (e.g., 'data:application/pdf;base64,...')."
-    ),
+  resume: z.string().describe("The user's resume as plain text."),
   jobType: z
     .string()
     .describe(
@@ -60,11 +56,7 @@ const upgradeResumeWithoutJDPrompt = ai.definePrompt({
   5.  Formatting the final output in Markdown with professional headings (e.g., ## Experience), bullet points for lists, and appropriate line breaks for readability.
 
   Here's the resume:
-  {{#if resume.startsWith("data:")}}
-    {{media url=resume}}
-  {{else}}
-    {{{resume}}}
-  {{/if}}
+  {{{resume}}}
 
   The user is seeking a job as a: {{{jobType}}}
 

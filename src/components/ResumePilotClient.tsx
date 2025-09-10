@@ -28,7 +28,6 @@ import { Skeleton } from "./ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type AtsResult = { atsScore: number; areasForImprovement: string };
-type ResumeInput = { file: File; dataUri: string; text?: string };
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-background");
 
@@ -73,7 +72,6 @@ const CircleProgress = ({ score }: { score: number }) => {
 
 
 export function ResumePilotClient() {
-  const [resumeInput, setResumeInput] = useState<ResumeInput | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [jobInputMode, setJobInputMode] = useState<"description" | "role">(
     "description"
@@ -85,7 +83,6 @@ export function ResumePilotClient() {
   const [enhancedResume, setEnhancedResume] = useState<string>("");
   const [editedEnhancedResume, setEditedEnhancedResume] = useState("");
   
-  const [isProcessingFile, startFileProcessing] = useTransition();
   const [isScanning, startScanning] = useTransition();
   const [isEnhancing, startEnhancing] = useTransition();
   const [isDownloading, startDownloading] = useTransition();
@@ -95,22 +92,14 @@ export function ResumePilotClient() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const enhanceRef = useRef<HTMLDivElement>(null);
   const mainToolRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const getActiveResume = (): string | undefined => {
-      if (resumeInput) return resumeInput.dataUri;
-      if (resumeText) return resumeText;
-      return undefined;
-  }
-
+  
   const handleScrollToTool = () => {
     mainToolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleScan = () => {
-    const activeResume = getActiveResume();
-    if (!activeResume) {
-        toast({ variant: "destructive", title: "Missing Resume", description: "Please upload or paste your resume." });
+    if (!resumeText) {
+        toast({ variant: "destructive", title: "Missing Resume", description: "Please paste your resume." });
         return;
     }
 
@@ -135,7 +124,7 @@ export function ResumePilotClient() {
       setAtsResult(null);
       setEnhancedResume("");
       try {
-        const result = await getAtsScore(activeResume, jobDescription);
+        const result = await getAtsScore(resumeText, jobDescription);
         setAtsResult(result);
         setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: 'center' }), 100);
       } catch (error) {
@@ -149,9 +138,8 @@ export function ResumePilotClient() {
   };
 
   const handleEnhance = () => {
-    const activeResume = getActiveResume();
-    if (!activeResume) {
-        toast({ variant: "destructive", title: "Missing Resume", description: "Please upload or paste your resume." });
+    if (!resumeText) {
+        toast({ variant: "destructive", title: "Missing Resume", description: "Please paste your resume." });
         return;
     }
     
@@ -168,7 +156,7 @@ export function ResumePilotClient() {
       setEnhancedResume("");
       try {
         const result = await getEnhancedResume(
-          activeResume,
+          resumeText,
           jobInputMode === 'description' ? jobDescription : undefined,
           jobInputMode === 'role' ? jobRole : undefined,
         );
@@ -241,50 +229,6 @@ export function ResumePilotClient() {
     });
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    startFileProcessing(() => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUri = e.target?.result as string;
-            if (dataUri) {
-                setResumeInput({ file, dataUri });
-                setResumeText(""); // Clear text input if a file is uploaded
-                toast({title: "Resume Uploaded", description: `Loaded ${file.name}.`});
-            } else {
-                 toast({
-                  variant: "destructive",
-                  title: "File Read Failed",
-                  description: "Could not read the selected file.",
-                });
-            }
-        };
-        reader.onerror = () => {
-            toast({
-              variant: "destructive",
-              title: "File Read Error",
-              description: "An error occurred while reading the file.",
-            });
-        };
-        reader.readAsDataURL(file);
-    });
-
-    // Reset file input
-    if(fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-  
-  const handleResumeTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setResumeText(e.target.value);
-      if (resumeInput) {
-          setResumeInput(null); // Clear file input if text is being pasted
-      }
-  }
-
-
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12 md:py-20">
       {/* Hero Section */}
@@ -320,56 +264,15 @@ export function ResumePilotClient() {
             <Card className="flex flex-col border-2 border-primary/20 bg-transparent shadow-lg shadow-primary/5">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">1. Your Resume</CardTitle>
-                <CardDescription>Upload your resume file (PDF or DOCX).</CardDescription>
+                <CardDescription>Paste your full resume text below.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".pdf,.docx"
-                    disabled={isProcessingFile}
-                  />
-
-                {resumeInput ? (
-                    <div className="flex items-center justify-between rounded-md border border-dashed border-primary/50 bg-primary/10 p-4">
-                        <div className="flex items-center gap-3">
-                            <CheckCircle2 className="h-6 w-6 text-primary" />
-                            <span className="font-medium">{resumeInput.file.name}</span>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => setResumeInput(null)} className="h-7 w-7">
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
-                ) : (
-                    <Button 
-                        variant="outline" 
-                        className="w-full border-dashed" 
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isProcessingFile}
-                    >
-                        {isProcessingFile ? (
-                            <><Loader2 className="mr-2 animate-spin"/> Processing...</>
-                        ) : (
-                            <><Upload className="mr-2"/> Upload File (PDF, DOCX)</>
-                        )}
-                    </Button>
-                )}
-
-                <div className="my-4 flex items-center">
-                    <div className="flex-grow border-t border-border"></div>
-                    <span className="mx-4 shrink text-xs uppercase text-muted-foreground">Or</span>
-                    <div className="flex-grow border-t border-border"></div>
-                </div>
-
                 <Textarea
                   id="resume-input"
                   placeholder="Paste your full resume here..."
-                  className="min-h-[300px] flex-1 resize-y text-base"
+                  className="min-h-[400px] flex-1 resize-y text-base"
                   value={resumeText}
-                  onChange={handleResumeTextChange}
-                  disabled={isProcessingFile}
+                  onChange={(e) => setResumeText(e.target.value)}
                 />
               </CardContent>
             </Card>

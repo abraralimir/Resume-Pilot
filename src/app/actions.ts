@@ -49,14 +49,10 @@ function markdownToHtml(markdown: string): string {
   `;
 }
 
-const resumeSchema = z.union([
-    z.string().min(50, "Resume text must be at least 50 characters."),
-    z.string().startsWith("data:").min(100, "Invalid file data."),
-]);
-
+const resumeSchema = z.string().min(50, "Resume text must be at least 50 characters.");
 
 export async function getAtsScore(
-  resume: string, // Can be text or data URI
+  resume: string,
   jobDescriptionText: string
 ): Promise<AnalyzeResumeAgainstJobDescriptionOutput> {
   const schema = z.object({
@@ -71,7 +67,7 @@ export async function getAtsScore(
 }
 
 export async function getEnhancedResume(
-  resume: string, // Can be text or data URI
+  resume: string,
   jobDescription: string | undefined,
   desiredJobRole: string | undefined,
 ): Promise<EnhanceResumeOutput | UpgradeResumeWithoutJDOutput> {

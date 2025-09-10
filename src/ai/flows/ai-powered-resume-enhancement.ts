@@ -11,11 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const EnhanceResumeInputSchema = z.object({
-  resume: z
-    .string()
-    .describe(
-      "The user's resume, which can be either plain text or a data URI (e.g., 'data:application/pdf;base64,...')."
-    ),
+  resume: z.string().describe("The user's resume as plain text."),
   jobDescription: z
     .string()
     .optional()
@@ -60,11 +56,7 @@ const enhanceResumePrompt = ai.definePrompt({
   Job Description: {{{jobDescription}}}
 
   Resume:
-  {{#if resume.startsWith("data:")}}
-    {{media url=resume}}
-  {{else}}
-    {{{resume}}}
-  {{/if}}
+  {{{resume}}}
 
   Enhanced Resume (in Markdown):`,
 });

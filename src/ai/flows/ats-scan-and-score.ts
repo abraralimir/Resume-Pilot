@@ -11,11 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzeResumeAgainstJobDescriptionInputSchema = z.object({
-  resume: z
-    .string()
-    .describe(
-      "The user's resume, which can be either plain text or a data URI (e.g., 'data:application/pdf;base64,...')."
-    ),
+  resume: z.string().describe("The user's resume as plain text."),
   jobDescriptionText: z
     .string()
     .describe('The text content of the job description.'),
@@ -55,11 +51,7 @@ const analyzeResumeAgainstJobDescriptionPrompt = ai.definePrompt({
   Analyze the following resume against the job description and provide an ATS compatibility score (0-100) and specific suggestions on how to improve the resume to better match the job description.
 
   Resume:
-  {{#if resume.startsWith("data:")}}
-    {{media url=resume}}
-  {{else}}
-    {{{resume}}}
-  {{/if}}
+  {{{resume}}}
 
   Job Description:
   {{jobDescriptionText}}
