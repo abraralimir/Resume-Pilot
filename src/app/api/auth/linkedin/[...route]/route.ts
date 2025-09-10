@@ -1,4 +1,6 @@
 
+'use server';
+
 import {NextRequest, NextResponse} from 'next/server';
 import { getAccessToken, getProfileData } from '@/app/services/linkedin';
 
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
   }
 
   if (route === 'callback') {
-    const REDIRECT_URI = getRedirectUri(req); // Re-create the same URI for the token exchange
+    const REDIRECT_URI = getRedirectUri(req);
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
