@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { analyzeResumeAgainstJobDescription, AnalyzeResumeAgainstJobDescriptionOutput } from '@/ai/flows/ats-scan-and-score';
 import { enhanceResume, EnhanceResumeOutput } from '@/ai/flows/ai-powered-resume-enhancement';
 import { upgradeResumeWithoutJD, UpgradeResumeWithoutJDOutput } from '@/ai/flows/resume-upgrade-no-jd';
-import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
 import puppeteer from 'puppeteer';
 import htmlToDocx from 'html-to-docx';
 
@@ -51,34 +49,21 @@ function markdownToHtml(markdown: string): string {
   `;
 }
 
-export async function parseResumeFile(fileBuffer: ArrayBuffer, fileType: string): Promise<{ text: string }> {
-    try {
-        if (fileType === 'application/pdf') {
-            // Pass null as the second argument to force parsing from buffer
-            const data = await pdf(Buffer.from(fileBuffer), {pagerender: null as any});
-            return { text: data.text };
-        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const { value } = await mammoth.extractRawText({ buffer: Buffer.from(fileBuffer) });
-            return { text: value };
-        } else {
-            throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
-        }
-    } catch (error) {
-        console.error("Error parsing file:", error);
-        throw new Error("Failed to read the contents of the file. It might be corrupted or in an unsupported format.");
-    }
-}
+const resumeSchema = z.union([
+    z.string().min(50, "Resume text must be at least 50 characters."),
+    z.string().startsWith("data:").min(100, "Invalid file data."),
+]);
 
 
 export async function getAtsScore(
-  resumeText: string,
+  resume: string, // Can be text or data URI
   jobDescriptionText: string
 ): Promise<AnalyzeResumeAgainstJobDescriptionOutput> {
   const schema = z.object({
-    resumeText: z.string().min(50, "Resume text must be at least 50 characters."),
+    resume: resumeSchema,
     jobDescriptionText: z.string().min(50, "Job description must be at least 50 characters."),
   });
-  const validated = schema.safeParse({ resumeText, jobDescriptionText });
+  const validated = schema.safeParse({ resume, jobDescriptionText });
   if (!validated.success) {
     throw new Error(validated.error.errors.map(e => e.message).join(', '));
   }
@@ -86,16 +71,16 @@ export async function getAtsScore(
 }
 
 export async function getEnhancedResume(
-  resumeText: string,
+  resume: string, // Can be text or data URI
   jobDescription: string | undefined,
   desiredJobRole: string | undefined,
 ): Promise<EnhanceResumeOutput | UpgradeResumeWithoutJDOutput> {
     if (jobDescription) {
         const schema = z.object({
-            resumeText: z.string().min(50, "Resume text must be at least 50 characters."),
+            resume: resumeSchema,
             jobDescription: z.string().min(50, "Job description must be at least 50 characters."),
         });
-        const validated = schema.safeParse({ resumeText, jobDescription });
+        const validated = schema.safeParse({ resume, jobDescription });
 
         if (!validated.success) {
             throw new Error(validated.error.errors.map(e => e.message).join(', '));
@@ -103,14 +88,15 @@ export async function getEnhancedResume(
         return await enhanceResume(validated.data);
     } else if (desiredJobRole) {
         const schema = z.object({
-            resumeText: z.string().min(50, "Resume text must be at least 50 characters."),
+            resume: resumeSchema,
             jobType: z.string().min(3, "Desired job role must be at least 3 characters."),
         });
-        const validated = schema.safeParse({ resumeText, jobType: desiredJobRole });
+        const validated = schema.safeParse({ resume, jobType: desiredJobRole });
         if (!validated.success) {
             throw new Error(validated.error.errors.map(e => e.message).join(', '));
         }
-        return await upgradeResumeWithoutJD(validated.data);
+        const { resume: validatedResume, jobType } = validated.data;
+        return await upgradeResumeWithoutJD({ resume: validatedResume, jobType });
     } else {
         throw new Error("Either a job description or a desired job role must be provided.");
     }

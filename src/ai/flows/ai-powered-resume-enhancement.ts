@@ -11,15 +11,14 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const EnhanceResumeInputSchema = z.object({
-  resumeText: z.string().describe('The text content of the resume.'),
+  resume: z.union([
+    z.string().describe('The text content of the resume.'),
+    z.string().describe("A data URI of the user's resume file (PDF or DOCX). Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+  ]),
   jobDescription: z
     .string()
     .optional()
     .describe('The job description to tailor the resume to.'),
-  desiredJobRole: z
-    .string()
-    .optional()
-    .describe('The desired job role if no job description is provided.'),
 });
 export type EnhanceResumeInput = z.infer<typeof EnhanceResumeInputSchema>;
 
@@ -44,21 +43,21 @@ const enhanceResumePrompt = ai.definePrompt({
   The output should be a professionally formatted resume in Markdown, ready to be presented. It should have clear headings, use bullet points for job responsibilities, and have proper spacing.
 
   Instructions:
-  1.  Analyze the resume and identify areas for improvement based on the job description or desired job role.
-  2.  Incorporate relevant keywords and phrases from the job description or suggested job role into the resume.
+  1.  Analyze the resume and identify areas for improvement based on the job description.
+  2.  Incorporate relevant keywords and phrases from the job description into the resume.
   3.  Improve the phrasing and grammar of the resume to make it more clear and concise.
   4.  Ensure the enhanced resume maintains the original structure and content as much as possible.
   5.  Do not remove or alter any personal information such as name, contact details, or previous job titles unless absolutely necessary for optimization.
   6.  Format the final output in Markdown with professional headings (e.g., ## Experience), bullet points for lists, and appropriate line breaks for readability.
 
-  {% if jobDescription %}
   Job Description: {{{jobDescription}}}
-  {% else %}
-  Desired Job Role: {{{desiredJobRole}}}
-  {% endif %}
 
   Resume:
-  {{{resumeText}}}
+  {{#if (isString resume)}}
+  {{{resume}}}
+  {{else}}
+  {{media url=resume}}
+  {{/if}}
 
   Enhanced Resume (in Markdown):`,
 });

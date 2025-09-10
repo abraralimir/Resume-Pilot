@@ -1,4 +1,3 @@
-// src/ai/flows/resume-upgrade-no-jd.ts
 'use server';
 /**
  * @fileOverview Enhances a resume based on a specified job type when a job description is not available.
@@ -12,7 +11,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const UpgradeResumeWithoutJDSchema = z.object({
-  resumeText: z.string().describe('The text content of the resume to be upgraded.'),
+  resume: z.union([
+    z.string().describe('The text content of the resume.'),
+    z.string().describe("A data URI of the user's resume file (PDF or DOCX). Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+  ]),
   jobType: z.string().describe('The type of job the user is seeking (e.g., Software Engineer, Project Manager).'),
 });
 
@@ -42,8 +44,12 @@ const upgradeResumeWithoutJDPrompt = ai.definePrompt({
   4.  Ensuring that the core information of the resume like name, contact details are not altered.
   5.  Formatting the final output in Markdown with professional headings (e.g., ## Experience), bullet points for lists, and appropriate line breaks for readability.
 
-  Here's the resume text:
-  {{{resumeText}}}
+  Here's the resume:
+  {{#if (isString resume)}}
+  {{{resume}}}
+  {{else}}
+  {{media url=resume}}
+  {{/if}}
 
   The user is seeking a job as a: {{{jobType}}}
 

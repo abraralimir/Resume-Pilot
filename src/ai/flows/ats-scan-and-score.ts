@@ -11,7 +11,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzeResumeAgainstJobDescriptionInputSchema = z.object({
-  resumeText: z.string().describe('The text content of the resume.'),
+  resume: z.union([
+    z.string().describe('The text content of the resume.'),
+    z.string().describe("A data URI of the user's resume file (PDF or DOCX). Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+  ]),
   jobDescriptionText: z.string().describe('The text content of the job description.'),
 });
 export type AnalyzeResumeAgainstJobDescriptionInput = z.infer<
@@ -22,7 +25,7 @@ const AnalyzeResumeAgainstJobDescriptionOutputSchema = z.object({
   atsScore: z
     .number()
     .describe(
-      'A score representing the ATS compatibility of the resume against the job description (0-100).' // Corrected typo here
+      'A score representing the ATS compatibility of the resume against the job description (0-100).'
     ),
   areasForImprovement: z
     .string()
@@ -49,13 +52,17 @@ const analyzeResumeAgainstJobDescriptionPrompt = ai.definePrompt({
   Analyze the following resume against the job description and provide an ATS compatibility score (0-100) and specific suggestions on how to improve the resume to better match the job description.
 
   Resume:
-  {{resumeText}}
+  {{#if (isString resume)}}
+  {{{resume}}}
+  {{else}}
+  {{media url=resume}}
+  {{/if}}
 
   Job Description:
   {{jobDescriptionText}}
 
   Provide the ATS score and areas for improvement in a structured format.
-  `, // Ensuring prompt is valid Handlebars syntax
+  `, 
 });
 
 const analyzeResumeAgainstJobDescriptionFlow = ai.defineFlow(
