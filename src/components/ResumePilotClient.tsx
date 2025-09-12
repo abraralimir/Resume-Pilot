@@ -395,14 +395,9 @@ export function ResumePilotClient() {
               <div className="flex-1">
                 <Alert className="bg-transparent text-base">
                   <Lightbulb className="h-5 w-5"/>
-                  <AlertTitle className="font-headline text-xl">Areas for Improvement</AlertTitle>
-                  <AlertDescription className="mt-2">
-                    <ul className="list-disc space-y-2 pl-5">
-                    {atsResult.areasForImprovement.split('\n').map((line, i) => {
-                      const trimmedLine = line.trim().replace(/^- /, '');
-                      return trimmedLine.length > 1 && <li key={i}>{trimmedLine}</li>
-                    })}
-                    </ul>
+                  <AlertTitle className="font-headline text-xl">Analysis Breakdown</AlertTitle>
+                  <AlertDescription className="mt-2 prose prose-invert max-w-none prose-headings:font-headline prose-p:font-body prose-li:font-body">
+                     <ReactMarkdown>{atsResult.areasForImprovement}</ReactMarkdown>
                   </AlertDescription>
                 </Alert>
               </div>
