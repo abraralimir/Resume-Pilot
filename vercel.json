@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/auth/linkedin/[...route]/route.ts": {
+      "maxDuration": 90
+    },
+    "src/app/actions.ts": {
+      "maxDuration": 90
+    }
+  }
+}

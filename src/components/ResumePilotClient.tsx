@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef, useTransition, useEffect } from "react";
+import React, { useState, useRef, useTransition } from "react";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -12,6 +12,10 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 import { getAtsScore, getEnhancedResume } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -47,7 +51,7 @@ const CircleProgress = ({ score, text }: { score: number; text: string }) => {
     const [progress, setProgress] = useState(0);
     const circumference = 2 * Math.PI * 55;
 
-    useEffect(() => {
+    React.useEffect(() => {
         const animation = requestAnimationFrame(() => {
             setProgress(score);
         });
@@ -101,17 +105,16 @@ export function ResumePilotClient() {
 
   const [atsResult, setAtsResult] = useState<AtsResult | null>(null);
   const [enhancedResume, setEnhancedResume] = useState<string>("");
-  const [editedEnhancedResume, setEditedEnhancedResume] = useState("");
   
   const [isScanning, startScanning] = useTransition();
   const [isEnhancing, startEnhancing] = useTransition();
-  const [isDownloading, startDownloading] = useTransition();
 
   const { toast } = useToast();
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const enhanceRef = useRef<HTMLDivElement>(null);
   const mainToolRef = useRef<HTMLDivElement>(null);
+  const pdfRef = useRef<HTMLDivElement>(null);
   
   const handleScrollToTool = () => {
     mainToolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -182,7 +185,6 @@ export function ResumePilotClient() {
           jobInputMode === 'role' ? jobRole : undefined,
         );
         setEnhancedResume(result.enhancedResume);
-        setEditedEnhancedResume(result.enhancedResume);
         setTimeout(() => enhanceRef.current?.scrollIntoView({ behavior: "smooth", block: 'center' }), 100);
       } catch (error) {
         toast({
@@ -194,7 +196,7 @@ export function ResumePilotClient() {
     });
   };
 
-  const handleDownload = (content: string, format: "txt" | "docx", baseName: string) => {
+  const handleDownload = (content: string, format: "txt" | "docx") => {
     if (!content) return;
 
     const plainText = markdownToText(content);
@@ -202,16 +204,43 @@ export function ResumePilotClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${baseName}.${format}`;
+    a.download = `enhanced-resume.${format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({
       title: "Download Started",
-      description: `Your ${baseName}.${format} is downloading.`
+      description: `Your enhanced-resume.${format} is downloading.`
     });
   };
+
+  const handleDownloadPdf = async () => {
+    const content = pdfRef.current;
+    if (!content) return;
+
+    toast({ title: "Generating PDF...", description: "Please wait a moment." });
+
+    try {
+      const canvas = await html2canvas(content, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+        backgroundColor: '#0a0e1c' // Match your dark theme background
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save('enhanced-resume.pdf');
+      toast({ title: "Download Started", description: "Your enhanced-resume.pdf is downloading." });
+    } catch(error) {
+       toast({ variant: "destructive", title: "PDF Generation Failed", description: (error as Error).message });
+    }
+  };
+
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12 md:py-20">
@@ -404,29 +433,31 @@ export function ResumePilotClient() {
             <Card className="bg-transparent">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Your Enhanced Resume</CardTitle>
-                <CardDescription>Ready to apply! You can make final edits below, then copy or download.</CardDescription>
+                <CardDescription>Ready to apply! Copy or download your new resume below.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Textarea
-                  className="min-h-[600px] font-mono text-sm leading-relaxed"
-                  value={editedEnhancedResume}
-                  onChange={(e) => setEditedEnhancedResume(e.target.value)}
-                />
+                <div ref={pdfRef} className="rounded-lg border bg-background/50 p-6 prose prose-invert prose-headings:font-headline prose-p:font-body prose-li:font-body">
+                  <ReactMarkdown>{enhancedResume}</ReactMarkdown>
+                </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                    <Button variant="ghost" onClick={() => {
-                        navigator.clipboard.writeText(editedEnhancedResume);
+                        navigator.clipboard.writeText(markdownToText(enhancedResume));
                         toast({title: "Copied to clipboard!"})
                    }}>
                         <Clipboard className="mr-2 h-4 w-4" />
                         Copy Text
                     </Button>
-                  <Button onClick={() => handleDownload(editedEnhancedResume, "txt", "enhanced-resume")}>
+                  <Button onClick={() => handleDownload(enhancedResume, "txt")}>
                     <Download className="mr-2 h-4 w-4" />
                     Download .txt
                   </Button>
-                   <Button variant="secondary" onClick={() => handleDownload(editedEnhancedResume, "docx", "enhanced-resume")}>
+                   <Button onClick={() => handleDownload(enhancedResume, "docx")}>
                     <Download className="mr-2 h-4 w-4" />
                     Download .docx
+                  </Button>
+                  <Button onClick={handleDownloadPdf}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download .pdf
                   </Button>
                 </div>
               </CardContent>
