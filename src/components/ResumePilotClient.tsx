@@ -12,7 +12,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { getAtsScore, getEnhancedResume, downloadEnhancedResumeAsPdf } from "@/app/actions";
+import { getAtsScore, getEnhancedResume } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -194,60 +194,22 @@ export function ResumePilotClient() {
     });
   };
 
-  const handleDownload = (content: string, format: "txt" | "pdf" | "docx", baseName: string) => {
+  const handleDownload = (content: string, format: "txt" | "docx", baseName: string) => {
     if (!content) return;
 
-    if (format === "txt" || format === "docx") {
-      const plainText = markdownToText(content);
-      const blob = new Blob([plainText], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${baseName}.${format === 'docx' ? 'docx' : 'txt'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Download Started",
-        description: `Your ${baseName}.${format} is downloading.`
-      });
-      return;
-    }
-
-    startDownloading(async () => {
-      try {
-        toast({ title: "Generating Download", description: `Your ${format.toUpperCase()} file is being prepared...` });
-        const base64 = await downloadEnhancedResumeAsPdf(content);
-        const mimeType = 'application/pdf';
-        const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {type: mimeType});
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${baseName}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: "Download Complete",
-          description: `Your document has been downloaded as a .${format} file.`,
-        });
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Download Failed",
-          description: (error as Error).message,
-        });
-      }
+    const plainText = markdownToText(content);
+    const blob = new Blob([plainText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${baseName}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Download Started",
+      description: `Your ${baseName}.${format} is downloading.`
     });
   };
 
@@ -458,16 +420,12 @@ export function ResumePilotClient() {
                         <Clipboard className="mr-2 h-4 w-4" />
                         Copy Text
                     </Button>
-                  <Button onClick={() => handleDownload(editedEnhancedResume, "txt", "enhanced-resume")} disabled={isDownloading}>
+                  <Button onClick={() => handleDownload(editedEnhancedResume, "txt", "enhanced-resume")}>
                     <Download className="mr-2 h-4 w-4" />
                     Download .txt
                   </Button>
-                   <Button variant="secondary" onClick={() => handleDownload(editedEnhancedResume, "pdf", "enhanced-resume")} disabled={isDownloading}>
-                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                    Download .pdf
-                  </Button>
-                   <Button variant="secondary" onClick={() => handleDownload(editedEnhancedResume, "docx", "enhanced-resume")} disabled={isDownloading}>
-                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                   <Button variant="secondary" onClick={() => handleDownload(editedEnhancedResume, "docx", "enhanced-resume")}>
+                    <Download className="mr-2 h-4 w-4" />
                     Download .docx
                   </Button>
                 </div>
